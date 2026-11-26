@@ -1,0 +1,671 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#1b3f73"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Devolução OS Contabilidade</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script async src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+<style>
+/* Layout: uma coluna estreita tipo formulário de papel; cada etapa é um "quadro" do DANFE, com rótulo em caixa alta no topo. */
+:root{
+  --paper:#eef2f7; --sheet:#ffffff; --ink:#152238; --muted:#566377; --line:#c9d3e0; --field:#ffffff; --field-line:#9fb0c6;
+  --accent:#1b3f73; --accent-ink:#ffffff; --accent-soft:#e3ebf6; --go:#1d7f47; --go-ink:#ffffff; --brand-band:#1b3f73; --brand-ink:#ffffff;
+  --warn:#8a5a00; --warn-bg:#fff4d9; --ok:#1f6a3a; --ok-bg:#e3f3e8; --bad:#a3271f; --bad-bg:#fbe6e4;
+  --f-head:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0f1622; --sheet:#172131; --ink:#e6ecf5; --muted:#9eabbf; --line:#2b3a50; --field:#0f1622; --field-line:#4a5d78;
+  --accent:#8db4ec; --accent-ink:#0d1626; --accent-soft:#1d2d47; --go:#4cc082; --go-ink:#06180e; --brand-band:#132a4d; --brand-ink:#ffffff;
+  --warn:#f0c46a; --warn-bg:#3a2e12; --ok:#7fd39b; --ok-bg:#163223; --bad:#f19a92; --bad-bg:#3c1b18; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0f1622; --sheet:#172131; --ink:#e6ecf5; --muted:#9eabbf; --line:#2b3a50; --field:#0f1622; --field-line:#4a5d78;
+  --accent:#8db4ec; --accent-ink:#0d1626; --accent-soft:#1d2d47; --go:#4cc082; --go-ink:#06180e; --brand-band:#132a4d; --brand-ink:#ffffff;
+  --warn:#f0c46a; --warn-bg:#3a2e12; --ok:#7fd39b; --ok-bg:#163223; --bad:#f19a92; --bad-bg:#3c1b18; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+input[type=file]{font-size:14px;padding:8px;max-width:100%;overflow:hidden}
+.choice label.f{display:flex;flex-direction:column;border:none;background:none;padding:0;cursor:default}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 64px}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header.top{display:flex;flex-direction:column;gap:4px;padding-top:8px}
+h1{font-family:var(--f-head);font-weight:700;font-size:1.7rem;letter-spacing:.01em;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:0;max-width:62ch}
+.box{background:var(--sheet);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:0 1px 2px rgba(20,35,60,.06);display:flex;flex-direction:column;gap:12px}
+.box > .lbl{font-family:var(--f-head);font-weight:600;font-size:1.05rem;letter-spacing:.01em;color:var(--accent);display:flex;align-items:center;gap:8px}
+.lbl .step{display:inline-grid;place-items:center;width:28px;height:28px;font-size:.9rem!important;flex:none;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:.75rem;letter-spacing:0}
+h2{font-family:var(--f-head);font-size:1.15rem;margin:0;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.grid.two{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:.9rem;color:var(--ink);min-width:0}
+label.f > span:first-child{font-weight:600;font-size:.92rem}
+label.f small.hint{color:var(--muted);font-size:.8rem;font-weight:400;line-height:1.35}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--field);border:1.5px solid var(--field-line);border-radius:8px;padding:11px 12px;width:100%;min-width:0;min-height:46px}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.75}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);outline:none}
+input[readonly]{background:var(--accent-soft);border-style:dashed}
+textarea{min-height:70px;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{flex:1 1 140px;border:1.5px solid var(--line);background:var(--field);border-radius:10px!important;min-height:64px;color:var(--ink);border-radius:5px;padding:10px;font:inherit;font-weight:500;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:2px}
+.tab small{color:var(--muted);font-weight:400;font-size:.78rem}
+.tab[aria-selected="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.btn{font:inherit;font-weight:600;border-radius:8px;padding:12px 16px;min-height:46px;text-decoration:none;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.small{padding:7px 10px;font-size:.85rem}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.note{font-size:.85rem;border-radius:5px;padding:9px 11px;margin:0}
+.note.warn{background:var(--warn-bg);color:var(--warn)}
+.note.ok{background:var(--ok-bg);color:var(--ok)}
+.note.bad{background:var(--bad-bg);color:var(--bad)}
+.note.info{background:var(--accent-soft);color:var(--ink)}
+.muted{color:var(--muted)}
+.choice{display:flex;flex-direction:column;gap:6px}
+.choice label{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;background:var(--field)}
+.choice input{width:auto;margin-top:3px;accent-color:var(--accent)}
+.choice label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.item{border:1.5px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--paper)}
+.item.off{opacity:.6}
+.item-head{display:flex;gap:10px;align-items:flex-start}
+.item-head input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--accent);margin-top:2px}
+.item-head .t{min-width:0;flex:1}
+.item-head .t b{display:block;overflow-wrap:anywhere}
+.pill{display:inline-block;font-family:var(--f-mono);font-size:.75rem;border:1px solid var(--line);border-radius:999px;padding:1px 8px;margin:2px 4px 0 0;color:var(--muted)}
+.pill.cfop{border-color:var(--warn);color:var(--warn);background:var(--warn-bg)}
+details summary{cursor:pointer;color:var(--accent);font-weight:500;font-size:.9rem}
+details[open] summary{margin-bottom:8px}
+.keyview{font-family:var(--f-mono);font-size:.9rem;letter-spacing:.02em;overflow-wrap:anywhere;padding:8px 10px;border:1px dashed var(--line);border-radius:5px}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.85rem}
+th,td{border-bottom:1px solid var(--line);padding:6px 6px;text-align:left;vertical-align:top}
+th{font-family:var(--f-head);text-transform:uppercase;letter-spacing:.05em;font-size:.7rem;color:var(--muted)}
+td.n,th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+pre.out{white-space:pre-wrap;font-family:var(--f-mono);font-size:.8rem;background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:10px;margin:0;max-height:420px;overflow:auto}
+.banner{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.thumbs{display:flex;gap:6px;flex-wrap:wrap}
+.thumbs img{width:72px;height:96px;object-fit:cover;border:1px solid var(--line);border-radius:4px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp 0.8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.spin{animation:none}}
+.foot{font-size:.78rem;color:var(--muted)}
+.brand{background:var(--brand-band);color:var(--brand-ink);margin-top:calc(-12px - env(safe-area-inset-top,0px));margin-left:calc(-1 * max(16px,env(safe-area-inset-left,0px)));margin-right:calc(-1 * max(16px,env(safe-area-inset-right,0px)));padding:calc(env(safe-area-inset-top,0px) + 14px) max(16px,env(safe-area-inset-right,0px)) 14px max(16px,env(safe-area-inset-left,0px))}
+.brand-in{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.brand-logo{height:56px;width:auto;max-width:160px;object-fit:contain;display:block}
+.brand-mark{display:inline-grid;place-items:center;width:48px;height:48px;border-radius:10px;background:#fff;color:#1b3f73;font-family:var(--f-head);font-weight:700;font-size:1.25rem;flex:none}
+.brand-name{font-family:var(--f-head);font-weight:600;font-size:1.1rem;line-height:1.2}
+.brand-name small{display:block;font-family:var(--f-body);font-weight:400;font-size:.8rem;opacity:.85}
+.btn.go{background:var(--go);border-color:var(--go);color:var(--go-ink)}
+.sitefoot{margin-top:8px;border-top:1px solid var(--line);padding-top:16px;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center;font-size:.88rem;color:var(--muted)}
+.sitefoot b{color:var(--ink);font-family:var(--f-head);font-size:1rem}
+.sitefoot .links{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.sitefoot a{color:var(--accent);font-weight:600;text-decoration:none;border:1.5px solid var(--line);border-radius:999px;padding:8px 14px;display:inline-flex;gap:6px;align-items:center}
+.sitefoot svg{width:18px;height:18px;fill:currentColor}
+</style>
+
+<div class="brand"><div class="brand-in" id="brandIn"></div></div>
+<div class="wrap">
+  <p class="note bad" id="jsWarn" style="margin-top:12px">Os campos não funcionam nesta visualização. Abra este app no navegador do celular ou do computador (Chrome, Safari ou Edge) pelo link enviado pelo escritório.</p>
+  <header class="top">
+    <h1>Rascunho de Devolução</h1>
+    <p class="sub">Envie a nota que você recebeu (XML ou foto do DANFE), marque o que vai devolver e mande o rascunho para o escritório. O app não emite nota: o escritório confere e emite.</p>
+  </header>
+
+  <div id="exampleBanner" class="note info banner" hidden>
+    <span><b>Dados de exemplo.</b> Isto não é uma nota sua. Carregue a sua nota abaixo.</span>
+    <button class="btn small ghost" id="btnClear" type="button">Limpar e começar</button>
+  </div>
+
+  <!-- 1. Nota de origem -->
+  <section class="box" aria-labelledby="s1">
+    <div class="lbl"><span class="step">1</span><span id="s1">Nota que será devolvida</span></div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-xml" aria-selected="true" type="button">Arquivo XML<small>Leitura completa e exata</small></button>
+      <button class="tab" role="tab" id="tab-foto" aria-selected="false" type="button">Foto do DANFE<small>Código de barras e leitura da imagem</small></button>
+    </div>
+
+    <div id="pane-xml" class="choice">
+      <label class="f"><span>Arquivo XML da nota</span><input type="file" id="fileXml" accept=".xml,text/xml,application/xml"></label>
+      <p class="muted" style="margin:0;font-size:.85rem">O XML costuma vir no e-mail do fornecedor junto com o DANFE. É a forma mais segura: todos os itens e impostos são lidos sem erro de digitação.</p>
+    </div>
+
+    <div id="pane-foto" hidden class="choice">
+      <label class="f"><span>Foto do DANFE</span><small class="hint">Toque para abrir a câmera ou escolher fotos. Pode mandar mais de uma página.</small><input type="file" id="fileFoto" accept="image/*" capture="environment" multiple></label>
+      <div class="thumbs" id="thumbs"></div>
+      <div class="row">
+        <button class="btn" id="btnBarcode" type="button" disabled>Ler código de barras</button>
+        <button class="btn ghost" id="btnIA" type="button" disabled hidden>Ler o DANFE inteiro</button>
+      </div>
+      <p class="muted" id="iaHint" style="margin:0;font-size:.85rem">Fotografe o DANFE inteiro, reto, com boa luz. O código de barras traz a chave de acesso; os itens você confere ou digita no passo 3.</p>
+    </div>
+
+
+    <p id="msg1" class="note" hidden></p>
+
+    <div id="keyBlock" hidden class="choice">
+      <div class="keyview" id="keyView"></div>
+    </div>
+
+    <details id="cabDet">
+      <summary>Dados da nota de origem (conferir ou digitar)</summary>
+      <div class="grid">
+        <label class="f"><span>Número</span><input id="o_nNF" inputmode="numeric"></label>
+        <label class="f"><span>Série</span><input id="o_serie" inputmode="numeric"></label>
+        <label class="f"><span>Data de emissão</span><input id="o_dhEmi" type="date"></label>
+        <label class="f"><span>Valor total da nota</span><input id="o_vNF" inputmode="decimal" class="mono"></label>
+      </div>
+      <label class="f" style="margin-top:10px"><span>Natureza da operação</span><input id="o_natOp"></label>
+      <div class="grid two" style="margin-top:10px">
+        <fieldset class="box" style="padding:10px;gap:8px"><div class="lbl">Emitente (quem emitiu)</div>
+          <label class="f"><span>CNPJ/CPF</span><input id="o_emit_doc" class="mono"></label>
+          <label class="f"><span>Razão social</span><input id="o_emit_nome"></label>
+          <div class="grid"><label class="f"><span>IE</span><input id="o_emit_ie" class="mono"></label><label class="f"><span>UF</span><input id="o_emit_uf" maxlength="2"></label></div>
+        </fieldset>
+        <fieldset class="box" style="padding:10px;gap:8px"><div class="lbl">Destinatário</div>
+          <label class="f"><span>CNPJ/CPF</span><input id="o_dest_doc" class="mono"></label>
+          <label class="f"><span>Razão social</span><input id="o_dest_nome"></label>
+          <div class="grid"><label class="f"><span>IE</span><input id="o_dest_ie" class="mono"></label><label class="f"><span>UF</span><input id="o_dest_uf" maxlength="2"></label></div>
+        </fieldset>
+      </div>
+    </details>
+  </section>
+
+  <!-- 2. Tipo -->
+  <section class="box" aria-labelledby="s2">
+    <div class="lbl"><span class="step">2</span><span id="s2">Que devolução é essa?</span></div>
+    <label class="f"><span>CNPJ da empresa que vai devolver</span><input id="meuCnpj" class="mono" inputmode="numeric" placeholder="00.000.000/0000-00"><small class="hint">É a empresa que emite a nota de devolução. Serve para o app saber se a nota é de compra ou de venda.</small></label>
+    <p id="papelHint" class="note info" hidden></p>
+    <div class="choice" id="papelChoice">
+      <label><input type="radio" name="papel" value="compra" checked><div><b>Comprei e vou devolver ao fornecedor</b><br><span class="muted">Devolução de compra. A nota de origem é do fornecedor.</span></div></label>
+      <label><input type="radio" name="papel" value="venda"><div><b>Vendi e o cliente me devolveu</b><br><span class="muted">Devolução de venda. A nota de origem é minha e o cliente não emitiu nota de devolução.</span></div></label>
+    </div>
+    <label class="f" id="finWrap"><span id="finLbl">Para que a mercadoria foi comprada?</span>
+      <select id="finalidade"></select>
+    </label>
+  </section>
+
+  <!-- 3. Itens -->
+  <section class="box" aria-labelledby="s3">
+    <div class="lbl"><span class="step">3</span><span id="s3">Itens a devolver</span></div>
+    <p class="muted" style="margin:0;font-size:.85rem">Desmarque o que não volta. Para devolução parcial, mude a quantidade. Os valores e impostos são recalculados na proporção da quantidade.</p>
+    <div id="itens" style="display:flex;flex-direction:column;gap:10px"></div>
+    <div class="row"><button class="btn small ghost" id="btnAddItem" type="button">+ Adicionar item manualmente</button></div>
+  </section>
+
+  <!-- 4. Motivo e contato -->
+  <section class="box" aria-labelledby="s4">
+    <div class="lbl"><span class="step">4</span><span id="s4">Motivo e transporte</span></div>
+    <div class="grid two">
+      <label class="f"><span>Motivo</span>
+        <select id="motivo">
+          <option>Mercadoria com defeito / avaria</option>
+          <option>Mercadoria em desacordo com o pedido</option>
+          <option>Quantidade enviada a maior</option>
+          <option>Prazo de entrega não cumprido</option>
+          <option>Preço divergente do combinado</option>
+          <option>Desistência da compra</option>
+          <option>Outro (descrever)</option>
+        </select>
+      </label>
+      <label class="f"><span>Quem leva a mercadoria</span>
+        <select id="frete">
+          <option value="9">Sem transporte / a combinar</option>
+          <option value="0">Eu levo / minha empresa entrega</option>
+          <option value="1">O fornecedor vem buscar</option>
+          <option value="2">Transportadora contratada</option>
+        </select>
+      </label>
+    </div>
+    <div class="grid">
+      <label class="f"><span>Volumes</span><input id="vol" inputmode="numeric"></label>
+      <label class="f"><span>Peso bruto (kg)</span><input id="peso" inputmode="decimal"></label>
+      <label class="f"><span>Transportadora (se houver)</span><input id="transp"></label>
+    </div>
+    <label class="f"><span>Observações para o escritório</span><small class="hint">Opcional. Conte o que ajudar o escritório: combinado com o fornecedor, protocolo, etc.</small><textarea id="obs" placeholder="Ex.: fornecedor autorizou a devolução por e-mail em 20/11; nº do protocolo de troca..."></textarea></label>
+    <div class="grid">
+      <label class="f"><span>Seu nome</span><input id="cNome" autocomplete="name"></label>
+      <label class="f"><span>Telefone</span><input id="cFone" inputmode="tel" autocomplete="tel"></label>
+    </div>
+  </section>
+
+  <!-- 5. Rascunho -->
+  <section class="box" aria-labelledby="s5">
+    <div class="lbl"><span class="step">5</span><span id="s5">Rascunho para o escritório</span></div>
+    <div id="checks"></div>
+    <div class="tbl-wrap"><table id="tblRes"></table></div>
+    <details><summary>Ver texto completo do rascunho</summary><pre class="out" id="outTxt"></pre></details>
+    <label class="f" id="cfgWhatsWrap"><span>WhatsApp do escritório (com DDD)</span><input id="cfgWhats" inputmode="tel" placeholder="51 99999-9999"></label>
+    <div class="row">
+      <a class="btn go" id="btnWhats" href="#" target="_blank" rel="noopener">Enviar pelo WhatsApp</a>
+      <button class="btn ghost" id="btnCopy" type="button">Copiar texto</button>
+      <button class="btn ghost" id="btnTxt" type="button" hidden>Salvar .txt</button>
+      <button class="btn ghost" id="btnJson" type="button" hidden>Salvar .json</button>
+    </div>
+    <p id="msg5" class="note" hidden></p>
+    <p class="foot">CFOP, natureza e finalidade são sugestões a partir da tabela de CFOP do Convênio SINIEF s/nº, de 15/12/1970 (texto vigente publicado pelo CONFAZ). O escritório confere tudo antes de emitir.</p>
+  </section>
+</div>
+
+<footer class="sitefoot" id="siteFoot"></footer>
+<script>
+"use strict";
+/* ===================== identidade do escritório (editar aqui) ===================== */
+const BRAND = {
+  nome: "OS Contabilidade",
+  razao: "Oliveira e Santos Contabilidade Ltda",
+  cnpj: "28.590.473/0001-05",
+  whats: "51998759360",
+  instagram: "oscontabilidadesap",
+  logo: "data:image/png;base64,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"
+};
+/* ===================== utilidades ===================== */
+const $ = id => document.getElementById(id);
+const UF_COD = {"11":"RO","12":"AC","13":"AM","14":"RR","15":"PA","16":"AP","17":"TO","21":"MA","22":"PI","23":"CE","24":"RN","25":"PB","26":"PE","27":"AL","28":"SE","29":"BA","31":"MG","32":"ES","33":"RJ","35":"SP","41":"PR","42":"SC","43":"RS","50":"MS","51":"MT","52":"GO","53":"DF"};
+function num(v){ if(v===null||v===undefined) return 0; if(typeof v==="number") return isFinite(v)?v:0;
+  let s=String(v).trim().replace(/[R$\s]/g,""); if(!s) return 0;
+  if(s.includes(",")) s=s.replace(/\./g,"").replace(",","."); const n=parseFloat(s); return isFinite(n)?n:0; }
+const r2 = n => Math.round((n+Number.EPSILON)*100)/100;
+const r4 = n => Math.round((n+Number.EPSILON)*10000)/10000;
+const brl = n => r2(n).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const qf = n => (+n).toLocaleString("pt-BR",{maximumFractionDigits:4});
+const onlyDig = s => String(s||"").replace(/\D/g,"");
+const keyClean = s => String(s||"").toUpperCase().replace(/[^0-9A-Z]/g,"");
+function fmtDoc(d){ d=keyClean(d); if(d.length===14) return d.replace(/^(..)(...)(...)(....)(..)$/,"$1.$2.$3/$4-$5"); if(d.length===11) return d.replace(/^(...)(...)(...)(..)$/,"$1.$2.$3-$4"); return d; }
+function fmtKey(k){ return keyClean(k).replace(/(.{4})/g,"$1 ").trim(); }
+function fmtDate(iso){ if(!iso) return ""; const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso); return m?`${m[3]}/${m[2]}/${m[1]}`:iso; }
+function show(el,cls,text){ el.className="note "+cls; el.textContent=text; el.hidden=!text; }
+function lsGet(k,d){ try{ const v=localStorage.getItem(k); return v===null?d:JSON.parse(v);}catch(e){return d;} }
+function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+
+/* ===================== chave de acesso ===================== */
+/* DV módulo 11, pesos 2..9 da direita para a esquerda; resto 0 ou 1 -> DV 0.
+   Caracteres alfanuméricos (CNPJ alfanumérico) entram pelo valor ASCII - 48. */
+function dvChave(k43){ let soma=0,p=2; for(let i=k43.length-1;i>=0;i--){ soma+=(k43.charCodeAt(i)-48)*p; p=p===9?2:p+1; } const r=soma%11; return (r<2)?0:11-r; }
+function decodeChave(raw){
+  const k=keyClean(raw); if(k.length!==44) return {ok:false,erro:`A chave tem ${k.length} posições; precisa ter 44.`};
+  if(!/^\d{6}[0-9A-Z]{14}\d{24}$/.test(k)) return {ok:false,erro:"A chave tem letras fora da posição do CNPJ."};
+  const dv=dvChave(k.slice(0,43)); const dvOk = String(dv)===k[43];
+  return {ok:true,dvOk,chave:k,cUF:k.slice(0,2),uf:UF_COD[k.slice(0,2)]||"?",aamm:k.slice(2,6),cnpj:k.slice(6,20),mod:k.slice(20,22),serie:String(+k.slice(22,25)),nNF:String(+k.slice(25,34)),tpEmis:k[34]};
+}
+function extractKey(text){ const t=keyClean(text); const m=t.match(/\d{6}[0-9A-Z]{14}\d{24}/); return m?m[0]:null; }
+
+/* ===================== estado ===================== */
+const FIN_COMPRA = [
+  {v:"revenda", t:"Revenda (comprei para vender)"},
+  {v:"industrializacao", t:"Industrialização ou produção rural (matéria-prima, insumo)"},
+  {v:"uso", t:"Uso e consumo da empresa"},
+  {v:"ativo", t:"Ativo imobilizado (máquina, equipamento, móvel)"}];
+const FIN_VENDA = [
+  {v:"terceiros", t:"Mercadoria que eu compro e revendo"},
+  {v:"producao", t:"Produto que eu fabrico / produzo"}];
+/* Tabela CFOP (Conv. SINIEF s/nº/70, texto vigente CONFAZ). Sufixo de 3 dígitos; prefixo 5/6 (saída) ou 1/2 (entrada). */
+const CFOP_DEV = {
+  compra:{ revenda:{n:"202",st:"411"}, industrializacao:{n:"201",st:"410"}, uso:{n:"556",st:"413"}, ativo:{n:"553",st:"412"} },
+  venda:{ terceiros:{n:"202",st:"411"}, producao:{n:"201",st:"410"} } };
+const CFOP_DESC = {
+  "5202":"Devolução de compra para comercialização","6202":"Devolução de compra para comercialização",
+  "5411":"Devolução de compra para comercialização em operação com mercadoria sujeita ao regime de substituição tributária","6411":"Devolução de compra para comercialização em operação com mercadoria sujeita ao regime de substituição tributária",
+  "5201":"Devolução de compra para industrialização ou produção rural","6201":"Devolução de compra para industrialização ou produção rural",
+  "5410":"Devolução de compra para industrialização ou produção rural em operação com mercadoria sujeita ao regime de substituição tributária","6410":"Devolução de compra para industrialização ou produção rural em operação com mercadoria sujeita ao regime de substituição tributária",
+  "5556":"Devolução de compra de material de uso ou consumo","6556":"Devolução de compra de material de uso ou consumo",
+  "5413":"Devolução de mercadoria destinada ao uso ou consumo, em operação com mercadoria sujeita ao regime de substituição tributária","6413":"Devolução de mercadoria destinada ao uso ou consumo, em operação com mercadoria sujeita ao regime de substituição tributária",
+  "5553":"Devolução de compra de bem para o ativo imobilizado","6553":"Devolução de compra de bem para o ativo imobilizado",
+  "5412":"Devolução de bem do ativo imobilizado, em operação com mercadoria sujeita ao regime de substituição tributária","6412":"Devolução de bem do ativo imobilizado, em operação com mercadoria sujeita ao regime de substituição tributária",
+  "1202":"Devolução de venda de mercadoria adquirida ou recebida de terceiros","2202":"Devolução de venda de mercadoria adquirida ou recebida de terceiros",
+  "1411":"Devolução de venda de mercadoria adquirida ou recebida de terceiros em operação com mercadoria sujeita ao regime de substituição tributária","2411":"Devolução de venda de mercadoria adquirida ou recebida de terceiros em operação com mercadoria sujeita ao regime de substituição tributária",
+  "1201":"Devolução de venda de produção do estabelecimento","2201":"Devolução de venda de produção do estabelecimento",
+  "1410":"Devolução de venda de produção do estabelecimento em operação com produto sujeito ao regime de substituição tributária","2410":"Devolução de venda de produção do estabelecimento em operação com produto sujeito ao regime de substituição tributária"};
+const VENDA_SUF = ["101","102","103","104","105","106","109","110","111","112","113","114","115","116","117","118","119","120","122","123","401","402","403","404","405"];
+const ST_SUF = ["401","402","403","404","405"];
+const ST_CST = ["10","30","60","70","201","202","203","500"];
+
+function blankItem(){ return {cProd:"",xProd:"",ncm:"",cest:"",cfop:"",u:"UN",q:0,vUn:0,vProd:0,vDesc:0,vFrete:0,vSeg:0,vOutro:0,
+  icms:{orig:"",cst:"",vBC:0,p:0,v:0,vBCST:0,pST:0,vST:0,vSTRet:0,vFCPST:0}, ipi:{cst:"",p:0,v:0}, ibscbs:null, on:true, qDev:0}; }
+function blankState(){ return {fonte:"", chave:"", nNF:"", serie:"", dhEmi:"", natOp:"", vNF:0, idDest:"",
+  emit:{doc:"",nome:"",ie:"",uf:""}, dest:{doc:"",nome:"",ie:"",uf:""}, itens:[], exemplo:false, avisoLeitura:""}; }
+let S = blankState();
+
+/* ===================== leitura do XML ===================== */
+function tx(el,tag){ if(!el) return ""; const n=el.getElementsByTagNameNS("*",tag)[0]||el.getElementsByTagName(tag)[0]; return n?n.textContent.trim():""; }
+function child(el,tag){ if(!el) return null; return el.getElementsByTagNameNS("*",tag)[0]||el.getElementsByTagName(tag)[0]||null; }
+function parseXml(str){
+  const doc=new DOMParser().parseFromString(str,"application/xml");
+  if(doc.getElementsByTagName("parsererror").length) throw new Error("O arquivo não é um XML válido.");
+  const inf=child(doc,"infNFe"); if(!inf) throw new Error("Não encontrei a NF-e dentro do arquivo (grupo infNFe). Confira se é o XML da nota, e não do evento ou da NFS-e.");
+  const st=blankState(); st.fonte="xml";
+  st.chave = keyClean(inf.getAttribute("Id")||"").replace(/^NFE/,"") || keyClean(tx(child(doc,"infProt"),"chNFe"));
+  const ide=child(inf,"ide");
+  st.nNF=tx(ide,"nNF"); st.serie=tx(ide,"serie"); st.dhEmi=(tx(ide,"dhEmi")||tx(ide,"dEmi")).slice(0,10); st.natOp=tx(ide,"natOp"); st.idDest=tx(ide,"idDest"); st.tpNF=tx(ide,"tpNF"); st.mod=tx(ide,"mod");
+  const pe=(tag)=>{ const e=child(inf,tag); if(!e) return {doc:"",nome:"",ie:"",uf:""}; const end=child(e,tag==="emit"?"enderEmit":"enderDest");
+    return {doc:tx(e,"CNPJ")||tx(e,"CPF")||tx(e,"idEstrangeiro"),nome:tx(e,"xNome"),ie:tx(e,"IE"),uf:tx(end,"UF"),mun:tx(end,"xMun")}; };
+  st.emit=pe("emit"); st.dest=pe("dest");
+  const tot=child(inf,"ICMSTot"); st.vNF=num(tx(tot,"vNF"));
+  const dets=[...inf.getElementsByTagNameNS("*","det")];
+  st.itens=dets.map(d=>{ const p=child(d,"prod"), imp=child(d,"imposto"); const it=blankItem();
+    Object.assign(it,{nItem:d.getAttribute("nItem"),cProd:tx(p,"cProd"),xProd:tx(p,"xProd"),ncm:tx(p,"NCM"),cest:tx(p,"CEST"),cfop:tx(p,"CFOP"),u:tx(p,"uCom"),
+      q:num(tx(p,"qCom")),vUn:num(tx(p,"vUnCom")),vProd:num(tx(p,"vProd")),vDesc:num(tx(p,"vDesc")),vFrete:num(tx(p,"vFrete")),vSeg:num(tx(p,"vSeg")),vOutro:num(tx(p,"vOutro"))});
+    const ic=child(imp,"ICMS"); const g=ic?[...ic.children][0]:null;
+    if(g){ it.icms={orig:tx(g,"orig"),cst:tx(g,"CST")||tx(g,"CSOSN"),vBC:num(tx(g,"vBC")),p:num(tx(g,"pICMS")),v:num(tx(g,"vICMS")),
+      vBCST:num(tx(g,"vBCST")),pST:num(tx(g,"pICMSST")),vST:num(tx(g,"vICMSST")),vSTRet:num(tx(g,"vICMSSTRet")),vFCPST:num(tx(g,"vFCPST")),pCredSN:num(tx(g,"pCredSN")),vCredSN:num(tx(g,"vCredICMSSN"))}; }
+    const ipi=child(imp,"IPI"); if(ipi){ const ipt=child(ipi,"IPITrib")||child(ipi,"IPINT"); it.ipi={cst:tx(ipt,"CST"),p:num(tx(ipt,"pIPI")),v:num(tx(ipt,"vIPI"))}; }
+    const ib=child(imp,"IBSCBS"); if(ib){ it.ibscbs={cst:tx(ib,"CST"),cClassTrib:tx(ib,"cClassTrib"),vBC:num(tx(ib,"vBC")),pIBSUF:num(tx(ib,"pIBSUF")),vIBSUF:num(tx(ib,"vIBSUF")),pIBSMun:num(tx(ib,"pIBSMun")),vIBSMun:num(tx(ib,"vIBSMun")),pCBS:num(tx(ib,"pCBS")),vCBS:num(tx(ib,"vCBS"))}; }
+    it.qDev=it.q; return it; });
+  return st;
+}
+
+/* ===================== CFOP sugerido ===================== */
+function isST(it){ const suf=String(it.cfop||"").slice(1); return ST_SUF.includes(suf) || ST_CST.includes(String(it.icms.cst||"").replace(/^0(?=\d{2}$)/,"")) || it.icms.vST>0 || it.icms.vSTRet>0; }
+function interestadual(){
+  if(S.idDest==="2") return true; if(S.idDest==="1") return false; if(S.idDest==="3") return "ext";
+  const a=(S.emit.uf||"").toUpperCase(), b=(S.dest.uf||"").toUpperCase(); if(a==="EX"||b==="EX") return "ext"; if(a&&b) return a!==b; return null; }
+function sugerirCfop(it){
+  const papel=getPapel(), fin=$("finalidade").value, inter=interestadual(); const st=isST(it);
+  const alertas=[]; const suf=String(it.cfop||"").replace(/\D/g,"").slice(1);
+  if(it.cfop && !VENDA_SUF.includes(suf)) alertas.push(`CFOP de origem ${it.cfop} não é de venda: a devolução/retorno pode ter código próprio`);
+  if(inter==="ext") return {cfop:"",alertas:[...alertas,"Operação com o exterior: CFOP 7.xxx a definir pelo escritório"]};
+  const regra=(CFOP_DEV[papel]||{})[fin]; if(!regra) return {cfop:"",alertas};
+  const pre = papel==="compra" ? (inter?"6":"5") : (inter?"2":"1");
+  if(inter===null) alertas.push("UF do emitente/destinatário não informada: considerei operação interna");
+  const cfop=pre+(st?regra.st:regra.n);
+  return {cfop, st, alertas};
+}
+function getPapel(){ const r=document.querySelector('input[name="papel"]:checked'); return r?r.value:"compra"; }
+
+/* ===================== cálculo proporcional ===================== */
+function calcItem(it){
+  const f = it.q>0 ? Math.min(Math.max(num(it.qDev),0), it.q)/it.q : 0;
+  const vProd = r2(num(it.qDev)*it.vUn);
+  const o={f,q:num(it.qDev),vProd,vDesc:r2(it.vDesc*f),vFrete:r2(it.vFrete*f),vSeg:r2(it.vSeg*f),vOutro:r2(it.vOutro*f),
+    vBC:r2(it.icms.vBC*f),vICMS:r2(it.icms.v*f),vBCST:r2(it.icms.vBCST*f),vST:r2(it.icms.vST*f),vFCPST:r2((it.icms.vFCPST||0)*f),vIPI:r2(it.ipi.v*f)};
+  if(it.ibscbs){ const b=it.ibscbs; o.ibs={vBC:r2(b.vBC*f),vIBSUF:r2(b.vIBSUF*f),vIBSMun:r2(b.vIBSMun*f),vCBS:r2(b.vCBS*f)}; }
+  o.vItem = r2(o.vProd - o.vDesc + o.vFrete + o.vSeg + o.vOutro + o.vST + o.vFCPST + o.vIPI);
+  return o; }
+
+/* ===================== render de itens ===================== */
+function itemField(i,key,label,val,cls="",mode="decimal"){ return `<label class="f"><span>${label}</span><input data-i="${i}" data-k="${key}" class="${cls}" inputmode="${mode}" value="${esc(val)}"></label>`; }
+function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function renderItens(){
+  const box=$("itens");
+  if(!S.itens.length){ box.innerHTML=`<p class="muted" style="margin:0">Nenhum item ainda. Carregue o XML, leia o DANFE ou adicione os itens manualmente.</p>`; return; }
+  box.innerHTML=S.itens.map((it,i)=>{ const sg=sugerirCfop(it); const c=calcItem(it);
+    return `<div class="item ${it.on?"":"off"}">
+      <div class="item-head"><input type="checkbox" data-i="${i}" data-k="on" ${it.on?"checked":""} aria-label="Devolver este item">
+        <div class="t"><b>${esc(it.xProd||"(sem descrição)")}</b>
+          <span class="pill">cód ${esc(it.cProd||"-")}</span><span class="pill">NCM ${esc(it.ncm||"-")}</span><span class="pill">CFOP orig. ${esc(it.cfop||"-")}</span>${sg.cfop?`<span class="pill cfop">CFOP sugerido ${sg.cfop} · conferir</span>`:""}${sg.st?`<span class="pill">com ST</span>`:""}
+        </div></div>
+      <div class="grid">
+        ${itemField(i,"qDev",`Qtd a devolver (de ${qf(it.q)} ${esc(it.u)})`,qf(it.qDev),"mono")}
+        <label class="f"><span>Valor devolvido</span><input class="mono" value="R$ ${brl(c.vProd)}" readonly tabindex="-1"></label>
+      </div>
+      <details><summary>Editar dados do item e impostos</summary>
+        <div class="grid">
+          ${itemField(i,"xProd","Descrição",it.xProd,"","text")}
+          ${itemField(i,"cProd","Código",it.cProd,"mono","text")}
+          ${itemField(i,"ncm","NCM",it.ncm,"mono","numeric")}
+          ${itemField(i,"cfop","CFOP na nota",it.cfop,"mono","numeric")}
+          ${itemField(i,"u","Unidade",it.u,"","text")}
+          ${itemField(i,"q","Qtd na nota",qf(it.q),"mono")}
+          ${itemField(i,"vUn","Valor unitário",String(it.vUn).replace(".",","),"mono")}
+          ${itemField(i,"vDesc","Desconto",brl(it.vDesc),"mono")}
+          ${itemField(i,"icms.cst","CST/CSOSN ICMS",it.icms.cst,"mono","numeric")}
+          ${itemField(i,"icms.vBC","BC ICMS",brl(it.icms.vBC),"mono")}
+          ${itemField(i,"icms.p","% ICMS",qf(it.icms.p),"mono")}
+          ${itemField(i,"icms.v","Valor ICMS",brl(it.icms.v),"mono")}
+          ${itemField(i,"icms.vBCST","BC ICMS ST",brl(it.icms.vBCST),"mono")}
+          ${itemField(i,"icms.vST","Valor ICMS ST",brl(it.icms.vST),"mono")}
+          ${itemField(i,"ipi.p","% IPI",qf(it.ipi.p),"mono")}
+          ${itemField(i,"ipi.v","Valor IPI",brl(it.ipi.v),"mono")}
+        </div>
+        <div class="row" style="margin-top:8px"><button class="btn small ghost" type="button" data-del="${i}">Remover item</button></div>
+      </details>
+      ${sg.alertas.length?`<p class="note warn">${sg.alertas.map(esc).join(". ")}.</p>`:""}
+    </div>`; }).join("");
+}
+$("itens").addEventListener("change",e=>{ const t=e.target; if(t.dataset.i===undefined) return; const it=S.itens[+t.dataset.i]; const k=t.dataset.k;
+  if(k==="on"){ it.on=t.checked; }
+  else { const textK=["xProd","cProd","ncm","cfop","u","icms.cst"]; const val=textK.includes(k)?t.value.trim():num(t.value);
+    const [a,b]=k.split("."); if(b) it[a][b]=val; else it[a]=val;
+    if(k==="q" && it.qDev>it.q) it.qDev=it.q;
+    if(k==="qDev"){ if(it.qDev>it.q){ it.qDev=it.q; } if(it.qDev<0) it.qDev=0; }
+    if(k==="q"||k==="vUn") it.vProd=r2(it.q*it.vUn); }
+  S.exemplo=false; renderAll(); });
+$("itens").addEventListener("click",e=>{ const d=e.target.dataset.del; if(d===undefined) return; S.itens.splice(+d,1); renderAll(); });
+$("btnAddItem").onclick=()=>{ const it=blankItem(); it.q=1; it.qDev=1; S.itens.push(it); renderAll();
+  const dets=$("itens").querySelectorAll(".item details"); if(dets.length) dets[dets.length-1].open=true; };
+
+/* ===================== cabeçalho <-> formulário ===================== */
+const HEAD = [["o_nNF","nNF"],["o_serie","serie"],["o_dhEmi","dhEmi"],["o_natOp","natOp"],["o_emit_doc","emit.doc"],["o_emit_nome","emit.nome"],["o_emit_ie","emit.ie"],["o_emit_uf","emit.uf"],["o_dest_doc","dest.doc"],["o_dest_nome","dest.nome"],["o_dest_ie","dest.ie"],["o_dest_uf","dest.uf"]];
+function headToForm(){ for(const [id,p] of HEAD){ const [a,b]=p.split("."); $(id).value = b?(S[a][b]||""):(S[a]||""); } $("o_vNF").value=S.vNF?brl(S.vNF):""; }
+for(const [id,p] of HEAD){ $(id).addEventListener("change",()=>{ const [a,b]=p.split("."); let v=$(id).value.trim(); if(p.endsWith(".uf")) v=v.toUpperCase(); if(b) S[a][b]=v; else S[a]=v; S.exemplo=false; renderAll(false); }); }
+$("o_vNF").addEventListener("change",()=>{ S.vNF=num($("o_vNF").value); renderAll(false); });
+
+/* ===================== papel / finalidade ===================== */
+function fillFinalidade(){ const papel=getPapel(); const list=papel==="compra"?FIN_COMPRA:FIN_VENDA; const cur=$("finalidade").value;
+  $("finLbl").textContent = papel==="compra"?"Para que a mercadoria foi comprada?":"O que foi vendido?";
+  $("finalidade").innerHTML=list.map(o=>`<option value="${o.v}">${esc(o.t)}</option>`).join(""); if(list.some(o=>o.v===cur)) $("finalidade").value=cur; }
+document.querySelectorAll('input[name="papel"]').forEach(r=>r.addEventListener("change",()=>{ fillFinalidade(); renderAll(false); }));
+$("finalidade").addEventListener("change",()=>renderAll(false));
+function autoPapel(){ const meu=keyClean($("meuCnpj").value); const h=$("papelHint"); if(!meu||!S.emit.doc){ h.hidden=true; return; }
+  if(keyClean(S.dest.doc)===meu){ document.querySelector('input[value="compra"]').checked=true; show(h,"ok","Sua empresa é a destinatária desta nota: é devolução de compra."); }
+  else if(keyClean(S.emit.doc)===meu){ document.querySelector('input[value="venda"]').checked=true; show(h,"ok","Sua empresa emitiu esta nota: é devolução de venda (nota de entrada)."); }
+  else show(h,"warn","O CNPJ da sua empresa não aparece como emitente nem como destinatário desta nota. Confira se é a nota certa.");
+  fillFinalidade(); }
+$("meuCnpj").addEventListener("change",()=>{ lsSet("dev_meuCnpj",$("meuCnpj").value); autoPapel(); renderAll(false); });
+
+/* ===================== rascunho ===================== */
+function buildDraft(){
+  const papel=getPapel(), fin=$("finalidade").value; const inter=interestadual();
+  const sel=S.itens.map((it,i)=>({it,i,c:calcItem(it),sg:sugerirCfop(it)})).filter(x=>x.it.on && x.c.q>0);
+  const tot=sel.reduce((a,x)=>{ for(const k of ["vProd","vDesc","vFrete","vSeg","vOutro","vBC","vICMS","vBCST","vST","vFCPST","vIPI","vItem"]) a[k]=r2((a[k]||0)+x.c[k]); if(x.c.ibs){ for(const k of ["vIBSUF","vIBSMun","vCBS"]) a[k]=r2((a[k]||0)+x.c.ibs[k]); } return a; },{});
+  const parcial = sel.length!==S.itens.length || sel.some(x=>x.c.q<x.it.q);
+  const contraparte = papel==="compra" ? S.emit : S.dest;
+  const natureza = papel==="compra" ? "Devolução de compra" : "Devolução de venda";
+  const cfops=[...new Set(sel.map(x=>x.sg.cfop).filter(Boolean))];
+  const infCpl = `${parcial?"Devolução parcial":"Devolução total"} referente à NF-e nº ${S.nNF||"?"}, série ${S.serie||"?"}, de ${fmtDate(S.dhEmi)||"?"}, chave ${S.chave||"?"}. Motivo: ${motivoTxt()}.`;
+  const checks=[];
+  if(!S.chave) checks.push(["bad","Falta a chave de acesso da nota de origem."]);
+  else { const d=decodeChave(S.chave); if(!d.ok||!d.dvOk) checks.push(["bad","A chave de acesso não confere (dígito verificador). Confira os 44 números."]); else checks.push(["ok",`Chave de acesso válida (${d.uf}, modelo ${d.mod}, série ${d.serie}, nº ${d.nNF}).`]); }
+  if(!sel.length) checks.push(["bad","Nenhum item marcado para devolver."]);
+  if(S.fonte==="ia") checks.push(["warn","Dados lidos da foto por inteligência artificial: confira números, NCM e valores com o DANFE."]);
+  if(S.fonte==="chave") checks.push(["warn","Só a chave foi informada: os itens foram digitados à mão. Envie também o DANFE ao escritório."]);
+  if(inter===null) checks.push(["warn","UF do emitente e do destinatário não informadas."]);
+  if(sel.some(x=>!x.sg.cfop)) checks.push(["warn","Há item sem CFOP sugerido. O escritório define."]);
+  if(S.vNF && !parcial){ const soma=r2(S.itens.reduce((a,it)=>a+calcItem(it).vItem,0)); if(Math.abs(soma-S.vNF)>0.05) checks.push(["warn",`Soma dos itens (R$ ${brl(soma)}) diferente do total da nota (R$ ${brl(S.vNF)}). Pode haver frete, seguro ou outras despesas no total: o escritório confere.`]); }
+  const finTxt = (papel==="compra"?FIN_COMPRA:FIN_VENDA).find(o=>o.v===fin)?.t||"";
+  const json = { tipo:"rascunho_nfe_devolucao", versao:1, gerado_em:new Date().toISOString(), fonte_dados:S.fonte||"manual",
+    aviso:"Rascunho preparado pelo cliente. CFOP, natureza e valores são sugestões a conferir pelo escritório antes da emissão.",
+    cliente:{cnpj:keyClean($("meuCnpj").value),contato:$("cNome").value,telefone:$("cFone").value},
+    tipo_devolucao:papel==="compra"?"devolucao_de_compra":"devolucao_de_venda", finalidade_original:fin, finalidade_texto:finTxt,
+    nova_nfe_sugerida:{ natureza_operacao:natureza, tpNF:papel==="compra"?"1 - Saída":"0 - Entrada", finNFe:"4 - Devolução de mercadoria",
+      nfe_referenciada:S.chave, destinatario:contraparte, cfops_sugeridos:cfops, informacoes_complementares:infCpl,
+      transporte:{modFrete:$("frete").value,volumes:$("vol").value,peso_bruto_kg:$("peso").value,transportadora:$("transp").value}, totais:tot },
+    nota_origem:{chave:S.chave,numero:S.nNF,serie:S.serie,emissao:S.dhEmi,natureza:S.natOp,valor_total:S.vNF,idDest:S.idDest,emitente:S.emit,destinatario:S.dest},
+    itens:sel.map(x=>({ nItem_origem:x.it.nItem||String(x.i+1), codigo:x.it.cProd, descricao:x.it.xProd, ncm:x.it.ncm, cest:x.it.cest, unidade:x.it.u,
+      cfop_origem:x.it.cfop, cfop_sugerido:x.sg.cfop||null, st:!!x.sg.st, alertas:x.sg.alertas,
+      qtd_origem:x.it.q, qtd_devolver:x.c.q, fator:r4(x.c.f), valor_unitario:x.it.vUn, valor_produtos:x.c.vProd, desconto:x.c.vDesc, frete:x.c.vFrete, seguro:x.c.vSeg, outras:x.c.vOutro,
+      icms:{orig:x.it.icms.orig,cst_csosn:x.it.icms.cst,bc:x.c.vBC,aliquota:x.it.icms.p,valor:x.c.vICMS,bc_st:x.c.vBCST,aliq_st:x.it.icms.pST,valor_st:x.c.vST,fcp_st:x.c.vFCPST},
+      ipi:{cst:x.it.ipi.cst,aliquota:x.it.ipi.p,valor:x.c.vIPI},
+      ibs_cbs: x.it.ibscbs?{cst:x.it.ibscbs.cst,cClassTrib:x.it.ibscbs.cClassTrib,bc:x.c.ibs.vBC,pIBSUF:x.it.ibscbs.pIBSUF,vIBSUF:x.c.ibs.vIBSUF,pIBSMun:x.it.ibscbs.pIBSMun,vIBSMun:x.c.ibs.vIBSMun,pCBS:x.it.ibscbs.pCBS,vCBS:x.c.ibs.vCBS}:null,
+      valor_item:x.c.vItem })),
+    motivo:motivoTxt(), observacoes:$("obs").value };
+  // texto
+  const L=[];
+  L.push("RASCUNHO DE NF-e DE DEVOLUÇÃO (conferir antes de emitir)");
+  L.push(`Cliente: CNPJ ${fmtDoc($("meuCnpj").value)||"-"} · ${$("cNome").value||"-"} · ${$("cFone").value||"-"}`);
+  L.push("");
+  L.push(`Tipo: ${natureza.toUpperCase()} (${parcial?"parcial":"total"})`);
+  L.push(`Finalidade original: ${finTxt}`);
+  L.push(`Nova NF-e: ${papel==="compra"?"SAÍDA":"ENTRADA"} · finNFe 4 (devolução)`);
+  L.push(`CFOP sugerido (conferir): ${cfops.join(", ")||"a definir"}${cfops.length?" - "+cfops.map(c=>CFOP_DESC[c]||"").join(" / "):""}`);
+  L.push(`Destinatário da nova nota: ${contraparte.nome||"-"} · ${fmtDoc(contraparte.doc)||"-"} · IE ${contraparte.ie||"-"} · ${contraparte.uf||"-"}`);
+  L.push("");
+  L.push("NOTA DE ORIGEM");
+  L.push(`NF-e ${S.nNF||"?"} série ${S.serie||"?"} de ${fmtDate(S.dhEmi)||"?"} · total R$ ${brl(S.vNF||0)}`);
+  L.push(`Chave: ${fmtKey(S.chave)||"?"}`);
+  L.push(`Emitente: ${S.emit.nome||"-"} · ${fmtDoc(S.emit.doc)||"-"} · ${S.emit.uf||"-"}`);
+  L.push(`Destinatário: ${S.dest.nome||"-"} · ${fmtDoc(S.dest.doc)||"-"} · ${S.dest.uf||"-"}`);
+  L.push(`Natureza original: ${S.natOp||"-"}`);
+  L.push("");
+  L.push("ITENS A DEVOLVER");
+  sel.forEach((x,n)=>{ const it=x.it,c=x.c;
+    L.push(`${n+1}. ${it.xProd} (cód ${it.cProd||"-"}) NCM ${it.ncm||"-"}${it.cest?" CEST "+it.cest:""}`);
+    L.push(`   CFOP orig. ${it.cfop||"-"} -> sugerido ${x.sg.cfop||"a definir"}${x.sg.st?" (ST)":""}`);
+    L.push(`   Qtd ${qf(c.q)} de ${qf(it.q)} ${it.u} x R$ ${String(it.vUn).replace(".",",")} = R$ ${brl(c.vProd)}${c.vDesc?` · desc. R$ ${brl(c.vDesc)}`:""}${c.vFrete?` · frete R$ ${brl(c.vFrete)}`:""}${c.vOutro?` · outras R$ ${brl(c.vOutro)}`:""}`);
+    L.push(`   ICMS CST/CSOSN ${it.icms.cst||"-"} · BC R$ ${brl(c.vBC)} · ${qf(it.icms.p)}% · R$ ${brl(c.vICMS)}${(c.vST||c.vBCST)?` · BC ST R$ ${brl(c.vBCST)} · ST R$ ${brl(c.vST)}`:""}${it.icms.vSTRet?` · ST retida ant. (origem) R$ ${brl(it.icms.vSTRet)}`:""}`);
+    if(it.ipi.v||it.ipi.p) L.push(`   IPI ${qf(it.ipi.p)}% · R$ ${brl(c.vIPI)}`);
+    if(c.ibs) L.push(`   IBS/CBS CST ${it.ibscbs.cst||"-"} cClassTrib ${it.ibscbs.cClassTrib||"-"} · BC R$ ${brl(c.ibs.vBC)} · IBS UF R$ ${brl(c.ibs.vIBSUF)} · IBS Mun R$ ${brl(c.ibs.vIBSMun)} · CBS R$ ${brl(c.ibs.vCBS)}`);
+    x.sg.alertas.forEach(a=>L.push(`   ! ${a}`)); });
+  L.push("");
+  L.push(`TOTAIS: produtos R$ ${brl(tot.vProd||0)} · BC ICMS R$ ${brl(tot.vBC||0)} · ICMS R$ ${brl(tot.vICMS||0)} · ST R$ ${brl(tot.vST||0)} · IPI R$ ${brl(tot.vIPI||0)} · total estimado R$ ${brl(tot.vItem||0)}`);
+  L.push("");
+  L.push(`Motivo: ${motivoTxt()}`);
+  L.push(`Transporte: ${$("frete").selectedOptions[0].text}${$("vol").value?` · ${$("vol").value} vol.`:""}${$("peso").value?` · ${$("peso").value} kg`:""}${$("transp").value?` · ${$("transp").value}`:""}`);
+  if($("obs").value) L.push(`Obs.: ${$("obs").value}`);
+  L.push("");
+  L.push(`Inf. complementares sugeridas: ${infCpl}`);
+  L.push("");
+  L.push("Valores proporcionais à quantidade devolvida. CFOP pela tabela do Conv. SINIEF s/nº/70. Escritório deve conferir regime, crédito, ST e IBS/CBS antes de emitir.");
+  return {json, text:L.join("\n"), checks, sel, tot};
+}
+function motivoTxt(){ const m=$("motivo").value; const o=$("obs").value.trim(); return m.startsWith("Outro")?(o||"outro motivo"):m; }
+
+function renderDraft(){
+  const d=buildDraft();
+  $("checks").innerHTML=d.checks.map(([c,t])=>`<p class="note ${c}" style="margin-bottom:6px">${esc(t)}</p>`).join("");
+  const rows=d.sel.map(x=>`<tr><td>${esc(x.it.xProd)}</td><td class="n">${qf(x.c.q)} ${esc(x.it.u)}</td><td class="n">${esc(x.sg.cfop||"-")}</td><td class="n">${brl(x.c.vProd)}</td><td class="n">${brl(x.c.vICMS)}</td><td class="n">${brl(x.c.vST)}</td><td class="n">${brl(x.c.vIPI)}</td></tr>`).join("");
+  $("tblRes").innerHTML=`<thead><tr><th>Item</th><th class="n">Qtd</th><th class="n">CFOP sug.</th><th class="n">Produtos</th><th class="n">ICMS</th><th class="n">ST</th><th class="n">IPI</th></tr></thead><tbody>${rows||`<tr><td colspan="7" class="muted">Nenhum item marcado.</td></tr>`}</tbody>
+   <tfoot><tr><th>Total</th><td></td><td></td><td class="n"><b>${brl(d.tot.vProd||0)}</b></td><td class="n">${brl(d.tot.vICMS||0)}</td><td class="n">${brl(d.tot.vST||0)}</td><td class="n">${brl(d.tot.vIPI||0)}</td></tr></tfoot>`;
+  $("outTxt").textContent=d.text;
+  const w=onlyDig($("cfgWhats").value); const wnum = w ? (w.length<=11?"55"+w:w) : "";
+  let txt=d.text; if(txt.length>3500) txt=txt.slice(0,3400)+"\n[... texto cortado: salve o .txt ou copie o rascunho completo]";
+  $("btnWhats").href=`https://wa.me/${wnum}?text=${encodeURIComponent(txt)}`;
+  return d;
+}
+
+/* ===================== render geral e persistência ===================== */
+function renderAll(rerenderHead=true){
+  if(rerenderHead) headToForm();
+  $("exampleBanner").hidden=!S.exemplo;
+  const k=S.chave?decodeChave(S.chave):null;
+  if(k&&k.ok){ $("keyBlock").hidden=false; $("keyView").textContent=`${fmtKey(k.chave)}  ·  ${k.dvOk?"DV ok":"DV NÃO CONFERE"}  ·  ${k.uf} · ${k.aamm.slice(2)}/20${k.aamm.slice(0,2)} · mod ${k.mod} · série ${k.serie} · nº ${k.nNF} · CNPJ emit. ${fmtDoc(k.cnpj)}`; }
+  else $("keyBlock").hidden=true;
+  renderItens(); renderDraft();
+  if(!S.exemplo) lsSet("dev_draft",{S,papel:getPapel(),fin:$("finalidade").value});
+}
+["motivo","frete","vol","peso","transp","obs","cNome","cFone"].forEach(id=>$(id).addEventListener("input",()=>{ renderDraft(); lsSet("dev_c_"+id,$(id).value); }));
+$("cfgWhats").addEventListener("input",()=>{ lsSet("dev_whats",$("cfgWhats").value); renderDraft(); });
+
+/* ===================== abas ===================== */
+const TABS=["xml","foto"];
+TABS.forEach(t=>$("tab-"+t).onclick=()=>{ TABS.forEach(u=>{ $("tab-"+u).setAttribute("aria-selected",u===t?"true":"false"); $("pane-"+u).hidden=u!==t; }); });
+
+/* ===================== XML ===================== */
+$("fileXml").onchange=async e=>{ const f=e.target.files[0]; if(!f) return;
+  try{ const txt=await f.text(); const st=parseXml(txt); S=st; show($("msg1"),"ok",`NF-e ${S.nNF} lida do XML: ${S.itens.length} item(ns), total R$ ${brl(S.vNF)}.`); autoPapel(); renderAll(); }
+  catch(err){ show($("msg1"),"bad",err.message||"Não consegui ler o arquivo."); } };
+
+/* ===================== chave digitada ===================== */
+function applyKey(k, fonte){ const d=decodeChave(k); if(!d.ok){ show($("msg1"),"bad",d.erro); return false; }
+  if(S.exemplo){ S=blankState(); }
+  S.chave=d.chave; if(!S.fonte||S.fonte==="manual") S.fonte=fonte; S.nNF=S.nNF||d.nNF; S.serie=S.serie||d.serie;
+  if(!S.emit.doc) S.emit.doc=d.cnpj; if(!S.emit.uf) S.emit.uf=d.uf;
+  show($("msg1"), d.dvOk?"ok":"bad", d.dvOk?`Chave válida. NF-e nº ${d.nNF}, série ${d.serie}, emitida em ${d.aamm.slice(2)}/20${d.aamm.slice(0,2)} por ${fmtDoc(d.cnpj)} (${d.uf}). Agora confira os dados e informe os itens.`:"O dígito verificador da chave não confere. Confira os 44 números.");
+  $("cabDet").open=true; autoPapel(); renderAll(); return d.dvOk; }
+
+/* ===================== foto: código de barras ===================== */
+let fotos=[];
+$("fileFoto").onchange=e=>{ fotos=[...e.target.files]; $("thumbs").innerHTML=""; fotos.forEach(f=>{ const im=document.createElement("img"); im.alt="Página do DANFE"; im.src=URL.createObjectURL(f); $("thumbs").appendChild(im); });
+  $("btnBarcode").disabled=!fotos.length; $("btnIA").disabled=!fotos.length; };
+function loadImg(file){ return new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>rej(new Error("imagem")); im.src=URL.createObjectURL(file); }); }
+function canvasFrom(im,maxSide,crop){ const c=document.createElement("canvas"); const sx=crop?crop[0]*im.naturalWidth:0, sy=crop?crop[1]*im.naturalHeight:0, sw=crop?crop[2]*im.naturalWidth:im.naturalWidth, sh=crop?crop[3]*im.naturalHeight:im.naturalHeight;
+  const sc=Math.min(1,maxSide/Math.max(sw,sh)); c.width=Math.round(sw*sc); c.height=Math.round(sh*sc); c.getContext("2d").drawImage(im,sx,sy,sw,sh,0,0,c.width,c.height); return c; }
+async function readBarcode(file){
+  const im=await loadImg(file);
+  const crops=[null,[0,0,1,.45],[.3,0,.7,.3],[0,.1,1,.35]];
+  if("BarcodeDetector" in window){ try{ const bd=new BarcodeDetector({formats:["code_128","qr_code"]}); for(const cr of crops){ const r=await bd.detect(canvasFrom(im,2400,cr)); for(const b of r){ const k=extractKey(b.rawValue); if(k) return k; } } }catch(e){} }
+  if(window.ZXing){ const hints=new Map(); hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.CODE_128,ZXing.BarcodeFormat.QR_CODE]); hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
+    const reader=new ZXing.MultiFormatReader(); reader.setHints(hints);
+    for(const cr of crops){ for(const side of [1600,2400]){ try{ const c=canvasFrom(im,side,cr); const src=new ZXing.HTMLCanvasElementLuminanceSource(c); const bmp=new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(src)); const r=reader.decode(bmp); const k=extractKey(r.getText()); if(k) return k; }catch(e){} } } }
+  return null; }
+$("btnBarcode").onclick=async()=>{ const b=$("btnBarcode"); b.disabled=true; const old=b.textContent; b.innerHTML='<span class="spin"></span> Lendo...';
+  try{ let k=null; for(const f of fotos){ k=await readBarcode(f); if(k) break; }
+    if(k){ applyKey(k,"chave"); if(!S.itens.length) show($("msg1"),"ok",`Chave lida do código de barras: ${fmtKey(k)}. ${sampleFn?"Toque em “Ler o DANFE inteiro” para trazer os itens, ou digite-os no passo 3.":"Digite os itens no passo 3 ou envie o XML."}`); }
+    else show($("msg1"),"warn","Não consegui ler o código de barras. Tire outra foto mais perto do código, reta e sem reflexo, ou envie o XML da nota."); }
+  finally{ b.disabled=false; b.textContent=old; } };
+
+/* ===================== foto: leitura por IA (somente quando disponível) ===================== */
+let sampleFn=null;
+const IA_PROMPT = `Você recebe foto(s) de um DANFE (documento auxiliar da NF-e brasileira). Transcreva os dados EXATAMENTE como impressos. Não invente nem calcule: se um campo estiver ilegível ou ausente, use "" (texto) ou 0 (número). Números em formato JSON (ponto decimal). Datas AAAA-MM-DD. Chave de acesso só com os 44 caracteres, sem espaços.
+Responda APENAS com JSON neste formato:
+{"chave":"","nNF":"","serie":"","dhEmi":"","natOp":"","vNF":0,
+"emit":{"doc":"","nome":"","ie":"","uf":""},"dest":{"doc":"","nome":"","ie":"","uf":""},
+"itens":[{"cProd":"","xProd":"","ncm":"","cst":"","cfop":"","u":"","q":0,"vUn":0,"vProd":0,"vDesc":0,"vBC":0,"vICMS":0,"pICMS":0,"vST":0,"vIPI":0,"pIPI":0}],
+"duvidas":"liste aqui campos que você não conseguiu ler com segurança"}`;
+async function initSample(){ try{ if(!window.claude||!claude.use) return; const s=await claude.use("sample"); if(!s) return; const lim=await s.limits().catch(()=>null); if(!lim||!lim.images) return;
+  sampleFn=s; sampleFn._max=lim.images.maxCount||4; $("btnIA").hidden=false; $("iaHint").textContent="Ler o código de barras traz a chave. “Ler o DANFE inteiro” transcreve emitente, itens e impostos da foto para você conferir."; }catch(e){} }
+async function toJpeg(file){ const im=await loadImg(file); const c=canvasFrom(im,2000,null); return await new Promise(r=>c.toBlob(r,"image/jpeg",0.85)); }
+$("btnIA").onclick=async()=>{ if(!sampleFn) return; const b=$("btnIA"); b.disabled=true; const old=b.textContent; b.innerHTML='<span class="spin"></span> Lendo o DANFE...';
+  show($("msg1"),"info","Lendo a imagem. Isso pode levar até um minuto.");
+  try{ const imgs=[]; for(const f of fotos.slice(0,sampleFn._max)) imgs.push(await toJpeg(f));
+    const j=await sampleFn.json(IA_PROMPT,{images:imgs,modelTier:"default"});
+    const st=blankState(); st.fonte="ia"; st.chave=extractKey(j.chave||"")||""; st.nNF=String(j.nNF||""); st.serie=String(j.serie||""); st.dhEmi=String(j.dhEmi||"").slice(0,10); st.natOp=j.natOp||""; st.vNF=num(j.vNF);
+    st.emit=Object.assign({doc:"",nome:"",ie:"",uf:""},j.emit||{}); st.dest=Object.assign({doc:"",nome:"",ie:"",uf:""},j.dest||{});
+    st.emit.doc=keyClean(st.emit.doc); st.dest.doc=keyClean(st.dest.doc);
+    st.itens=(j.itens||[]).map(x=>{ const it=blankItem(); Object.assign(it,{cProd:String(x.cProd||""),xProd:String(x.xProd||""),ncm:onlyDig(x.ncm),cfop:onlyDig(x.cfop),u:String(x.u||"UN"),q:num(x.q),vUn:num(x.vUn),vProd:num(x.vProd),vDesc:num(x.vDesc)});
+      it.icms.cst=onlyDig(x.cst); it.icms.vBC=num(x.vBC); it.icms.v=num(x.vICMS); it.icms.p=num(x.pICMS); it.icms.vST=num(x.vST); it.ipi.v=num(x.vIPI); it.ipi.p=num(x.pIPI);
+      if(!it.vUn && it.q) it.vUn=r4(it.vProd/it.q); it.qDev=it.q; return it; });
+    if(!st.chave && S.chave) st.chave=S.chave;
+    S=st; $("cabDet").open=true; autoPapel(); renderAll();
+    show($("msg1"),"warn",`Leitura concluída: ${S.itens.length} item(ns). Confira cada número com o DANFE antes de enviar.${j.duvidas?" Pontos de dúvida: "+j.duvidas:""}`); }
+  catch(e){ const m={not_granted:"A leitura automática não foi autorizada. Digite os itens no passo 3.",rate_limited:"Muitas leituras seguidas. Aguarde um minuto e tente de novo.",images_unavailable:"Leitura de imagem indisponível aqui. Digite os itens no passo 3."}; show($("msg1"),"bad",m[e&&e.code]||"Não consegui ler a imagem. Tente uma foto mais nítida ou digite os itens no passo 3."); if(e&&e.code==="not_granted") $("btnIA").hidden=true; }
+  finally{ b.disabled=false; b.textContent=old; } };
+
+/* ===================== copiar / salvar ===================== */
+let dl=null;
+$("btnCopy").onclick=async()=>{ const t=buildDraft().text; try{ await navigator.clipboard.writeText(t); show($("msg5"),"ok","Rascunho copiado. Cole no WhatsApp ou e-mail do escritório."); }
+  catch(e){ const det=$("outTxt").closest("details"); det.open=true; const r=document.createRange(); r.selectNodeContents($("outTxt")); const s=getSelection(); s.removeAllRanges(); s.addRange(r); show($("msg5"),"warn","Não consegui copiar sozinho. O texto está selecionado abaixo: use Copiar do seu celular."); } };
+async function save(ext){ if(!dl) return; const d=buildDraft(); const base=`devolucao_NF${S.nNF||"sem-numero"}_${new Date().toISOString().slice(0,10)}`;
+  try{ await dl.save({filename:`${base}.${ext}`,data: ext==="json"?JSON.stringify(d.json,null,2):d.text}); show($("msg5"),"ok","Arquivo salvo."); }
+  catch(e){ if(e&&e.code==="declined") return; show($("msg5"),"warn","Não foi possível salvar o arquivo aqui. Use Copiar texto ou o WhatsApp."); } }
+$("btnTxt").onclick=()=>save("txt"); $("btnJson").onclick=()=>save("json");
+async function initDl(){ try{ if(!window.claude||!claude.use) return; dl=await claude.use("downloads"); if(dl){ $("btnTxt").hidden=false; $("btnJson").hidden=false; } }catch(e){} }
+
+/* ===================== exemplo ===================== */
+function exemplo(){ const st=blankState(); st.exemplo=true; st.fonte="exemplo";
+  const k43="4325110123456700019055001000004321100001234"; st.chave=k43.slice(0,43)+dvChave(k43.slice(0,43));
+  Object.assign(st,{nNF:"4321",serie:"1",dhEmi:"2025-11-18",natOp:"Venda de mercadoria",vNF:1586.40,idDest:"1",
+    emit:{doc:"01234567000190",nome:"DISTRIBUIDORA EXEMPLO LTDA",ie:"0960000000",uf:"RS"},dest:{doc:"98765432000110",nome:"LOJA DO CLIENTE EXEMPLO ME",ie:"0961111111",uf:"RS"}});
+  const a=blankItem(); Object.assign(a,{nItem:"1",cProd:"1020",xProd:"CAMISETA ALGODÃO M",ncm:"61091000",cfop:"5102",u:"UN",q:24,vUn:35.5,vProd:852,qDev:6});
+  a.icms=Object.assign(a.icms,{orig:"0",cst:"00",vBC:852,p:17,v:144.84});
+  const b=blankItem(); Object.assign(b,{nItem:"2",cProd:"3310",xProd:"PILHA ALCALINA AA C/4",ncm:"85061019",cest:"1000100",cfop:"5405",u:"CX",q:40,vUn:16.5,vProd:660,qDev:40});
+  b.icms=Object.assign(b.icms,{orig:"0",cst:"60",vSTRet:74.4});
+  st.itens=[a,b]; st.vNF=r2(852+660+74.4); return st; }
+$("btnClear").onclick=()=>{ S=blankState(); $("msg1").hidden=true; renderAll(); };
+
+/* ===================== início ===================== */
+function renderBrand(){
+  const bi=$("brandIn"); bi.innerHTML="";
+  if(BRAND.logo){ const im=document.createElement("img"); im.className="brand-logo"; im.alt=BRAND.nome; im.src=BRAND.logo; bi.appendChild(im); }
+  else { const m=document.createElement("span"); m.className="brand-mark"; m.textContent="OS"; m.setAttribute("aria-hidden","true"); bi.appendChild(m); }
+  const n=document.createElement("div"); n.className="brand-name"; if(!BRAND.logo) n.textContent=BRAND.nome; const sm=document.createElement("small"); sm.textContent="Envio de dados para nota de devolução"; n.appendChild(sm); bi.appendChild(n);
+  const f=$("siteFoot"); const w=onlyDig(BRAND.whats); const ig=String(BRAND.instagram||"").replace(/^@/,"");
+  const WA='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .1-1.3c0-.1-.2-.2-.5-.3z"/></svg>';
+  const IG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zM17.3 5.5a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zM12 2c-2.7 0-3 0-4.1.1A7 7 0 0 0 5.6 2.5 4.8 4.8 0 0 0 2.5 5.6a7 7 0 0 0-.4 2.3C2 9 2 9.3 2 12s0 3 .1 4.1a7 7 0 0 0 .4 2.3 4.8 4.8 0 0 0 3.1 3.1 7 7 0 0 0 2.3.4c1.1.1 1.4.1 4.1.1s3 0 4.1-.1a7 7 0 0 0 2.3-.4 4.8 4.8 0 0 0 3.1-3.1 7 7 0 0 0 .4-2.3c.1-1.1.1-1.4.1-4.1s0-3-.1-4.1a7 7 0 0 0-.4-2.3 4.8 4.8 0 0 0-3.1-3.1 7 7 0 0 0-2.3-.4C15 2 14.7 2 12 2zm0 1.8c2.7 0 3 0 4 .1a5.2 5.2 0 0 1 1.8.3 3 3 0 0 1 1.8 1.8 5.2 5.2 0 0 1 .3 1.8c.1 1 .1 1.3.1 4s0 3-.1 4a5.2 5.2 0 0 1-.3 1.8 3 3 0 0 1-1.8 1.8 5.2 5.2 0 0 1-1.8.3c-1 .1-1.3.1-4 .1s-3 0-4-.1a5.2 5.2 0 0 1-1.8-.3 3 3 0 0 1-1.8-1.8 5.2 5.2 0 0 1-.3-1.8c-.1-1-.1-1.3-.1-4s0-3 .1-4a5.2 5.2 0 0 1 .3-1.8 3 3 0 0 1 1.8-1.8 5.2 5.2 0 0 1 1.8-.3c1-.1 1.3-.1 4-.1z"/></svg>';
+  const fmtW = w.length===11?w.replace(/^(..)(.....)(....)$/,"($1) $2-$3"):w.length===10?w.replace(/^(..)(....)(....)$/,"($1) $2-$3"):w;
+  f.innerHTML=`<b>${esc(BRAND.razao||BRAND.nome)}</b>${BRAND.cnpj?`<span>CNPJ ${esc(BRAND.cnpj)}</span>`:""}<div class="links">${w?`<a href="https://wa.me/55${w}" target="_blank" rel="noopener">${WA}<span>${esc(fmtW)}</span></a>`:""}${ig?`<a href="https://www.instagram.com/${encodeURIComponent(ig)}/" target="_blank" rel="noopener">${IG}<span>@${esc(ig)}</span></a>`:""}</div>`;
+  if(w){ $("cfgWhats").value=w; $("cfgWhatsWrap").hidden=true; }
+}
+(function start(){
+  const jw=document.getElementById("jsWarn"); if(jw) jw.hidden=true;
+  renderBrand();
+  $("meuCnpj").value=lsGet("dev_meuCnpj",""); if(!onlyDig(BRAND.whats)) $("cfgWhats").value=lsGet("dev_whats","");
+  ["motivo","frete","vol","peso","transp","obs","cNome","cFone"].forEach(id=>{ const v=lsGet("dev_c_"+id,null); if(v!==null) $(id).value=v; });
+  const saved=lsGet("dev_draft",null);
+  if(saved && saved.S && (saved.S.itens?.length||saved.S.chave)){ S=saved.S; const r=document.querySelector(`input[name="papel"][value="${saved.papel}"]`); if(r) r.checked=true; fillFinalidade(); if(saved.fin) $("finalidade").value=saved.fin; }
+  else { S=exemplo(); fillFinalidade(); }
+  renderAll();
+  initSample(); initDl();
+})();
+</script>
+</body></html>
