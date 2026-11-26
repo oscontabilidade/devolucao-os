@@ -70,6 +70,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .choice label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
 .item{border:1.5px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--paper)}
 .item.off{opacity:.6}
+.qty{display:flex;gap:6px;align-items:stretch}.qty input{text-align:center;min-width:0;flex:1}.qty .btn{min-width:44px;font-size:1.2rem}
+.item-head .btn{flex:none}
 .item-head{display:flex;gap:10px;align-items:flex-start}
 .item-head input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--accent);margin-top:2px}
 .item-head .t{min-width:0;flex:1}
@@ -207,7 +209,8 @@ pre.out{white-space:pre-wrap;font-family:var(--f-mono);font-size:.8rem;backgroun
   <!-- 3. Itens -->
   <section class="box" aria-labelledby="s3">
     <div class="lbl"><span class="step">3</span><span id="s3">Itens a devolver</span></div>
-    <p class="muted" style="margin:0;font-size:.85rem">Desmarque o que não volta. Para devolução parcial, mude a quantidade. Os valores e impostos são recalculados na proporção da quantidade.</p>
+    <p class="muted" style="margin:0;font-size:.85rem">Devolve só parte da nota? Toque em <b>Excluir</b> nos itens que não voltam e ajuste a quantidade com − e +. Valor, desconto, frete, ICMS, ST e IPI são recalculados na proporção da quantidade.</p>
+    <p id="msg3" class="note" hidden></p>
     <div id="itens" style="display:flex;flex-direction:column;gap:10px"></div>
     <div class="row"><button class="btn small ghost" id="btnAddItem" type="button">+ Adicionar item manualmente</button></div>
   </section>
@@ -507,10 +510,13 @@ function renderItens(){
       <div class="item-head"><input type="checkbox" data-i="${i}" data-k="on" ${it.on?"checked":""} aria-label="Devolver este item">
         <div class="t"><b>${esc(it.xProd||"(sem descrição)")}</b>
           <span class="pill">cód ${esc(it.cProd||"-")}</span><span class="pill">NCM ${esc(it.ncm||"-")}</span><span class="pill">CFOP orig. ${esc(it.cfop||"-")}</span>${sg.cfop?`<span class="pill cfop">CFOP sugerido ${sg.cfop} · conferir</span>`:""}${sg.st?`<span class="pill">com ST</span>`:""}
-        </div></div>
+        </div><button class="btn small ghost" type="button" data-del="${i}" aria-label="Excluir este item da devolução">Excluir</button></div>
       <div class="grid">
-        ${itemField(i,"qDev",`Qtd a devolver (de ${qf(it.q)} ${esc(it.u)})`,qf(it.qDev),"mono")}
-        <label class="f"><span>Valor devolvido</span><input class="mono" value="R$ ${brl(c.vProd)}" readonly tabindex="-1"></label>
+        <div class="f"><span>Qtd a devolver (de ${qf(it.q)} ${esc(it.u)})</span>
+          <div class="qty"><button class="btn small ghost" type="button" data-step="-1" data-si="${i}" aria-label="Diminuir">−</button><input data-i="${i}" data-k="qDev" class="mono" inputmode="decimal" value="${esc(qf(it.qDev))}"><button class="btn small ghost" type="button" data-step="1" data-si="${i}" aria-label="Aumentar">+</button></div>
+          <div class="row" style="gap:6px"><button class="btn small ghost" type="button" data-all="${i}">Tudo</button><button class="btn small ghost" type="button" data-zero="${i}">Nada</button></div>
+        </div>
+        <label class="f"><span>Valor devolvido${c.f>0&&c.f<1?" (parcial)":""}</span><input class="mono" value="R$ ${brl(c.vProd)}" readonly tabindex="-1">${(c.vICMS||c.vST||c.vIPI)?`<small class="hint">Impostos proporcionais: ICMS ${brl(c.vICMS)} · ST ${brl(c.vST)} · IPI ${brl(c.vIPI)}</small>`:""}</label>
       </div>
       <details><summary>Editar dados do item e impostos</summary>
         <div class="grid">
@@ -541,10 +547,16 @@ $("itens").addEventListener("change",e=>{ const t=e.target; if(t.dataset.i===und
   else { const textK=["xProd","cProd","ncm","cfop","u","icms.cst"]; const val=textK.includes(k)?t.value.trim():num(t.value);
     const [a,b]=k.split("."); if(b) it[a][b]=val; else it[a]=val;
     if(k==="q" && it.qDev>it.q) it.qDev=it.q;
-    if(k==="qDev"){ if(it.qDev>it.q){ it.qDev=it.q; } if(it.qDev<0) it.qDev=0; }
+    if(k==="qDev"){ if(it.qDev>it.q){ it.qDev=it.q; show($("msg3"),"warn",`A quantidade a devolver não pode passar da quantidade da nota (${qf(it.q)}).`); } else $("msg3").hidden=true; if(it.qDev<0) it.qDev=0; it.on=it.qDev>0; }
     if(k==="q"||k==="vUn") it.vProd=r2(it.q*it.vUn); }
   S.exemplo=false; renderAll(); });
-$("itens").addEventListener("click",e=>{ const d=e.target.dataset.del; if(d===undefined) return; S.itens.splice(+d,1); renderAll(); });
+$("itens").addEventListener("click",e=>{ const ds=e.target.dataset; if(!ds) return;
+  if(ds.del!==undefined){ S.itens.splice(+ds.del,1); S.exemplo=false; renderAll(); return; }
+  let it=null;
+  if(ds.step!==undefined){ it=S.itens[+ds.si]; it.qDev=Math.min(it.q,Math.max(0,r4(num(it.qDev)+(+ds.step)))); }
+  else if(ds.all!==undefined){ it=S.itens[+ds.all]; it.qDev=it.q; }
+  else if(ds.zero!==undefined){ it=S.itens[+ds.zero]; it.qDev=0; }
+  if(it){ it.on=it.qDev>0; S.exemplo=false; renderAll(); } });
 $("btnAddItem").onclick=()=>{ const it=blankItem(); it.q=1; it.qDev=1; S.itens.push(it); renderAll();
   const dets=$("itens").querySelectorAll(".item details"); if(dets.length) dets[dets.length-1].open=true; };
 
