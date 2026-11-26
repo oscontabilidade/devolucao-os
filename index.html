@@ -155,10 +155,11 @@ pre.out{white-space:pre-wrap;font-family:var(--f-mono);font-size:.8rem;backgroun
       <p class="muted" style="margin:0;font-size:.85rem">Se a câmera não abrir dentro do WhatsApp ou do Instagram, toque nos três pontinhos e escolha "Abrir no Chrome" (ou no Safari).</p>
       <div class="thumbs" id="thumbs"></div>
       <div class="row">
-        <button class="btn" id="btnBarcode" type="button" disabled>Ler código de barras</button>
+        <button class="btn" id="btnOcr" type="button" disabled>Ler itens da foto</button>
+        <button class="btn ghost" id="btnBarcode" type="button" disabled>Só a chave (código de barras)</button>
         <button class="btn ghost" id="btnIA" type="button" disabled hidden>Ler o DANFE inteiro</button>
       </div>
-      <p class="muted" id="iaHint" style="margin:0;font-size:.85rem">Fotografe o DANFE inteiro, reto, com boa luz. O código de barras traz a chave de acesso; os itens você confere ou digita no passo 3.</p>
+      <p class="muted" id="iaHint" style="margin:0;font-size:.85rem">Fotografe o DANFE inteiro, de perto, reto, com boa luz e sem sombra. A leitura da foto é automática e pode errar: o app marca em amarelo o que precisa conferir. <b>O XML continua sendo a forma mais precisa.</b></p>
     </div>
 
 
@@ -539,6 +540,7 @@ function renderItens(){
         </div>
         <div class="row" style="margin-top:8px"><button class="btn small ghost" type="button" data-del="${i}">Remover item</button></div>
       </details>
+      ${it.aviso?`<p class="note warn">Leitura da foto, conferir: ${esc(it.aviso)}.</p>`:""}
       ${sg.alertas.length?`<p class="note warn">${sg.alertas.map(esc).join(". ")}.</p>`:""}
     </div>`; }).join("");
 }
@@ -702,7 +704,7 @@ function applyKey(k, fonte){ const d=decodeChave(k); if(!d.ok){ show($("msg1"),"
 /* ===================== foto: código de barras ===================== */
 let fotos=[];
 function addFotos(list,replace){ const nv=[...list]; if(!nv.length) return; fotos=replace?nv:fotos.concat(nv); $("thumbs").innerHTML=""; fotos.forEach(f=>{ const im=document.createElement("img"); im.alt="Página do DANFE"; im.src=URL.createObjectURL(f); $("thumbs").appendChild(im); });
-  $("btnBarcode").disabled=!fotos.length; $("btnIA").disabled=!fotos.length; }
+  $("btnBarcode").disabled=!fotos.length; $("btnIA").disabled=!fotos.length; $("btnOcr").disabled=!fotos.length; }
 $("fileCam").onchange=e=>{ addFotos(e.target.files,false); e.target.value=""; };
 $("fileFoto").onchange=e=>{ addFotos(e.target.files,false); e.target.value=""; };
 $("btnCam").onclick=()=>$("fileCam").click();
@@ -880,6 +882,178 @@ function vInit(){
   $("vLimpar").onclick=()=>{ const keep={vEmitDoc:$("vEmitDoc").value,vEmitUf:$("vEmitUf").value,vCNome:$("vCNome").value,vCFone:$("vCFone").value}; vIds.forEach(id=>{ const el=$(id); el.value = keep[id]??(el.tagName==="SELECT"?el.options[0].value:""); }); VI=[vBlank()]; $("vMsg").hidden=true; vRender(); };
   vRender();
 }
+
+/* pré-processamento de foto de DANFE para OCR: escala, deskew, binarização adaptativa e remoção de linhas */
+function ocrPrep(im,target){
+  const nw=im.naturalWidth||im.width, nh=im.naturalHeight||im.height;
+  const sc=Math.min(3,target/nw); const W=Math.round(nw*sc), H=Math.round(nh*sc);
+  // 1) estimar inclinação numa cópia pequena (limiar global simples)
+  const sw=700, sh=Math.round(nh*sw/nw); const s=document.createElement('canvas'); s.width=sw; s.height=sh; const sx=s.getContext('2d'); sx.drawImage(im,0,0,sw,sh);
+  const sd=sx.getImageData(0,0,sw,sh).data; let mean=0; for(let i=0;i<sw*sh;i++) mean+=sd[i*4]; mean/=sw*sh;
+  const pts=[]; for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){ const v=sd[(y*sw+x)*4]; if(v<mean*0.6) pts.push(x,y); }
+  let best=0,bv=-1; for(let ang=-10;ang<=10.001;ang+=0.2){ const t=ang*Math.PI/180, cs=Math.cos(t), sn=Math.sin(t); const L=sh*2+sw*2, hist=new Float64Array(L);
+    for(let i=0;i<pts.length;i+=2){ const yy=Math.round(-pts[i]*sn+pts[i+1]*cs)+sw; if(yy>=0&&yy<L) hist[yy]++; }
+    let v=0; for(let i=1;i<L;i++){ const d=hist[i]-hist[i-1]; v+=d*d; } if(v>bv){bv=v;best=ang;} }
+  // 2) escalar + girar em tons de cinza
+  const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,W,H); x.imageSmoothingQuality='high';
+  if(Math.abs(best)>0.15){ x.translate(W/2,H/2); x.rotate(-best*Math.PI/180); x.drawImage(im,-W/2,-H/2,W,H); x.setTransform(1,0,0,1,0,0); } else x.drawImage(im,0,0,W,H);
+  const d=x.getImageData(0,0,W,H), a=d.data; const g=new Uint8ClampedArray(W*H);
+  for(let i=0;i<W*H;i++) g[i]=0.299*a[i*4]+0.587*a[i*4+1]+0.114*a[i*4+2];
+  // 3) binarização adaptativa (Bradley) com imagem integral
+  const I=new Uint32Array((W+1)*(H+1)); for(let y=1;y<=H;y++){ let s2=0; for(let xx=1;xx<=W;xx++){ s2+=g[(y-1)*W+xx-1]; I[y*(W+1)+xx]=I[(y-1)*(W+1)+xx]+s2; } }
+  const r=Math.max(8,Math.round(W/50)), T=0.12; const bin=new Uint8Array(W*H);
+  for(let y=0;y<H;y++){ const y1=Math.max(0,y-r), y2=Math.min(H,y+r+1); for(let xx=0;xx<W;xx++){ const x1=Math.max(0,xx-r), x2=Math.min(W,xx+r+1); const cnt=(x2-x1)*(y2-y1);
+    const sum=I[y2*(W+1)+x2]-I[y1*(W+1)+x2]-I[y2*(W+1)+x1]+I[y1*(W+1)+x1]; bin[y*W+xx]= g[y*W+xx]*cnt < sum*(1-T) ? 1 : 0; } }
+  // 4) apagar linhas longas da grade (horizontais e verticais), tolerando 1px de inclinação residual
+  const thH=Math.round(W/22), thV=Math.round(W/40); const kill=new Uint8Array(W*H);
+  for(let y=0;y<H;y++){ let run=0; for(let xx=0;xx<=W;xx++){ const on = xx<W && (bin[y*W+xx] || (y>0&&bin[(y-1)*W+xx]&&y+1<H&&bin[(y+1)*W+xx])); if(on) run++; else { if(run>thH) for(let k=xx-run;k<xx;k++) kill[y*W+k]=1; run=0; } } }
+  for(let xx=0;xx<W;xx++){ let run=0; for(let y=0;y<=H;y++){ const on = y<H && (bin[y*W+xx] || (xx>0&&bin[y*W+xx-1]&&xx+1<W&&bin[y*W+xx+1])); if(on) run++; else { if(run>thV) for(let k=y-run;k<y;k++) kill[k*W+xx]=1; run=0; } } }
+  for(let i=0;i<W*H;i++){ const v=(bin[i]&&!kill[i])?0:255; a[i*4]=a[i*4+1]=a[i*4+2]=v; a[i*4+3]=255; }
+  x.putImageData(d,0,0); return {canvas:c, skew:best};
+}
+
+/* ===================== OCR do DANFE: interpretação do texto ===================== */
+const OCR_DIG={O:"0",o:"0",D:"0",Q:"0",U:"0",B:"8",S:"5",s:"5",I:"1",l:"1",i:"1",L:"1",T:"7",G:"6",Z:"2",z:"2",g:"9",q:"9","|":"1","!":"1"};
+function ocrDigits(t){ return String(t).replace(/[^0-9A-Za-z|!]/g,"").split("").map(c=>/\d/.test(c)?c:(OCR_DIG[c]??"x")).join(""); }
+function ocrClean(t){ return String(t).replace(/^[\[\]|()\-—–_:;'"`.,]+|[\[\]|()\-—–_:;'"`]+$/g,""); }
+/* candidatos numéricos de um token: se tem separador, lê como número BR; se não, tenta casas decimais */
+function ocrNumCands(tok,decs){
+  let t=ocrClean(tok).replace(/[OoDQ]/g,"0").replace(/[Il|]/g,"1").replace(/S/g,"5").replace(/B/g,"8");
+  t=t.replace(/(\d)\/(\d)/g,"$1,"+"$2");
+  if(!/^\d[\d.,]*$/.test(t)) return [];
+  if(/[.,]/.test(t)){ const last=Math.max(t.lastIndexOf(","),t.lastIndexOf(".")); const ip=t.slice(0,last).replace(/[.,]/g,""), fp=t.slice(last+1);
+    if(fp.length===3 && t[last]==="." && !t.includes(",")) return [{v:+(ip+fp),exact:true}];
+    return [{v:parseFloat(ip+"."+fp),exact:true}]; }
+  return decs.map(k=>({v:+t/Math.pow(10,k),exact:false,k}));
+}
+function near(a,b,tol){ return Math.abs(a-b)<=tol; }
+/* resolve quantidade, unitário e total para que q × vUn = vTotal */
+function ocrResolveQVT(tq,tu,tt){
+  const Q=ocrNumCands(tq,[4,3,2,0]), U=ocrNumCands(tu,[4,2,3,6,8,10,0]), T=ocrNumCands(tt,[2]);
+  for(const t of T) for(const q of Q) for(const u of U){ if(q.v>0 && near(q.v*u.v,t.v,Math.max(0.011,t.v*0.0005))) return {q:q.v,vUn:u.v,vProd:t.v,ok:true}; }
+  // sem combinação: usa total e quantidade e calcula o unitário
+  const t=T[0], q=Q[0];
+  if(t && q && q.v>0) return {q:q.v,vUn:Math.round(t.v/q.v*1e6)/1e6,vProd:t.v,ok:false,why:"valor unitário calculado (total ÷ quantidade)"};
+  return {q:q?q.v:0,vUn:U[0]?U[0].v:0,vProd:t?t.v:0,ok:false,why:"quantidade e valores não conferem"};
+}
+function ocrMoney(tok){ const c=ocrNumCands(tok,[2]); return c.length?c[0].v:null; }
+function ocrPct(tok){ const c=ocrNumCands(tok,[2,0]); return c.length?c[0].v:null; }
+const UNIT_RE=/^[A-Za-z]{1,6}\d{0,2}$/;
+function parseDanfeText(text){
+  const lines=String(text).split(/\r?\n/).map(l=>l.replace(/\s+$/,"")).filter(l=>l.trim());
+  const res={chave:"",dest:{doc:""},dhEmi:"",tot:{},itens:[],linhas:lines.length};
+  // chave: 11 grupos de 4 dígitos
+  const flat=lines.join(" ");
+  const km=flat.match(/(?:[0-9OoDBSIl]{4}[ .]?){10}[0-9OoDBSIl]{4}/g)||[];
+  for(const m of km){ const k=ocrDigits(m); if(k.length===44 && !k.includes("x")){ const d=decodeChave(k); if(d.ok&&d.dvOk){ res.chave=k; break; } if(!res.chave) res.chaveDuvida=k; } }
+  // CNPJ/CPF do destinatário: primeiro documento formatado diferente do CNPJ da chave
+  const docs=(flat.match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}|\d{3}\.\d{3}\.\d{3}-\d{2}/g)||[]).map(onlyDig);
+  const emitK=res.chave?res.chave.slice(6,20):"";
+  res.emitDoc=emitK||docs[0]||"";
+  res.dest.doc=docs.find(d=>d!==res.emitDoc)||"";
+  const dm=flat.match(/(\d{2})\/(\d{2})\/(\d{4})/); if(dm) res.dhEmi=`${dm[3]}-${dm[2]}-${dm[1]}`;
+  const UFSET=new Set(Object.values(UF_COD)); const di=lines.findIndex(l=>/DESTINAT/i.test(l));
+  if(di>=0) for(let i=di+1;i<Math.min(lines.length,di+7)&&!res.dest.uf;i++){ for(const t of lines[i].split(/\s+/)){ const u=ocrClean(t); if(u.length===2&&UFSET.has(u)){ res.dest.uf=u; break; } } }
+  // totais por rótulo: valor na linha seguinte, na coluna mais próxima do rótulo
+  const LBL=[["vProd",/TOTAL\s+DOS\s+PRODUTOS/i],["vNF",/TOTAL\s+DA\s+NOTA/i],["vST",/VALOR\s+(DO\s+)?[I!1]CMS\s+(SUBST|S\.?\s?T\b)/i],["vICMS",/VALOR\s+DO\s+[I!1]CMS(?!\s+(SUBST|S\.?\s?T\b))/i],["vIPI",/VALOR\s+(TOTAL\s+)?DO\s+[I1]P[I1]/i],["vFrete",/VALOR\s+DO\s+FRETE/i],["vDesc",/DESCONTO/i]];
+  lines.forEach((l,i)=>{ for(const [k,re] of LBL){ const m=l.match(re); if(!m||res.tot[k]!==undefined) continue; const nx=lines[i+1]||""; const pos=m.index;
+      const toks=[...nx.matchAll(/\S+/g)].map(t=>({s:t.index,t:t[0],v:ocrMoney(t[0])})).filter(t=>t.v!==null);
+      if(!toks.length) continue; toks.sort((a,b)=>Math.abs(a.s-pos)-Math.abs(b.s-pos)); res.tot[k]=toks[0].v; } });
+  // itens: linha com NCM (8 dígitos) seguido de CST/CSOSN e CFOP
+  let last=null;
+  for(const raw of lines){
+    const toks=raw.split(/\s+/).map(ocrClean).filter(t=>t&&!/^[—–\-|\[\]()]+$/.test(t));
+    let j=-1, cst="", cfop="", after=0;
+    for(let i=0;i<toks.length;i++){
+      if(/[\/:]/.test(toks[i])) continue; const d=ocrDigits(toks[i]); if(!/^\d{8}$/.test(d)) continue;
+      if((toks[i].match(/\d/g)||[]).length<6) continue;
+      const a=ocrDigits(toks[i+1]||""), b=ocrDigits(toks[i+2]||"");
+      if(toks[i+2] && !/[\/:]/.test(toks[i+2]) && /^[1-7]\d{3}$/.test(b) && a.length>=1 && a.length<=7){ j=i; cst=a.replace(/x/g,"").slice(-3); cfop=b; after=i+3; break; }
+      if(/^\d{6,8}$/.test(a) && /^[1-7]\d{3}$/.test(a.slice(-4))){ j=i; cst=a.slice(0,-4); cfop=a.slice(-4); after=i+2; break; }
+      if(/^[1-7]\d{3}$/.test(a)){ j=i; cst=""; cfop=a; after=i+2; break; }
+    }
+    if(j<1){ // possível continuação da descrição do item anterior
+      if(last && /^[A-Za-zÀ-ú0-9 .,/\-]+$/.test(raw.trim()) && raw.trim().length<60 && !/\d{2},\d{2}/.test(raw) && !/DADOS|ADICIONAIS|C[AÁ]LCULO|TRANSPORT|FATURA/i.test(raw)) last.xProd+=" "+raw.trim();
+      else last=null; continue; }
+    let k=after; let u="";
+    if(toks[k] && UNIT_RE.test(toks[k]) && !/^\d+$/.test(toks[k])){ u=toks[k].toUpperCase(); k++; }
+    const nums=toks.slice(k).filter(t=>ocrNumCands(t,[2]).length);
+    const it={cProd:"",xProd:"",ncm:ocrDigits(toks[j]),cst,cfop,u:u||"UN",q:0,vUn:0,vProd:0,vDesc:0,vBC:0,vICMS:0,pICMS:0,vIPI:0,pIPI:0,avisos:[]};
+    let head=toks.slice(0,j); const ci=head.slice(0,3).findIndex(t=>(t.match(/\d/g)||[]).length>=2 && t.length<=20);
+    if(ci>=0 && head.length>ci+1){ it.cProd=head[ci]; it.xProd=head.slice(ci+1).join(" "); } else it.xProd=head.filter(t=>t.length>2||/[A-Za-z]{2}/.test(t)).join(" ");
+    it.xProd=it.xProd.replace(/^[^A-Za-z0-9À-ú]+/,"");
+    if(nums.length>=3){ const r=ocrResolveQVT(nums[0],nums[1],nums[2]); it.q=r.q; it.vUn=r.vUn; it.vProd=r.vProd; if(!r.ok) it.avisos.push(r.why); }
+    else it.avisos.push("não consegui ler quantidade e valores");
+    const rest=nums.slice(3).map(t=>ocrNumCands(t,[2])[0].v);
+    const fit=(o)=>{ const [bc,vi,ip,pi]=o; return bc>0&&pi>0&&near(bc*pi/100,vi,0.02); };
+    let lay=null;
+    if(rest.length>=5){ const a=[rest[0],rest[1],rest[2],rest[3],rest[4]]; const b=rest.length>=6?[rest[1],rest[2],rest[3],rest[4],rest[5]]:null;
+      if(fit([a[0],a[1],a[2],a[3]])) lay={vBC:a[0],vICMS:a[1],vIPI:a[2],pICMS:a[3],pIPI:a[4]};
+      else if(b&&fit([b[0],b[1],b[2],b[3]])) lay={vDesc:rest[0],vBC:b[0],vICMS:b[1],vIPI:b[2],pICMS:b[3],pIPI:b[4]};
+      else { lay={vBC:a[0],vICMS:a[1],vIPI:a[2],pICMS:a[3],pIPI:a[4]};
+        if(a[0]>0 && a[3]>0 && a[3]<=35){ lay.vICMS=Math.round(a[0]*a[3])/100; it.avisos.push("valor do ICMS recalculado pela base × alíquota"); }
+        else if(a[1]>0||a[0]>0) it.avisos.push("ICMS lido não confere com base × alíquota"); } }
+    else if(rest.length){ it.avisos.push("impostos do item incompletos"); }
+    if(lay) Object.assign(it,lay);
+    const qvtOk=!it.avisos.some(x=>/unitário calculado|não conferem/.test(x));
+    if(!qvtOk && it.q>0 && it.vBC>0 && it.pICMS>0 && near(it.vBC*it.pICMS/100,it.vICMS,0.02) && /00$/.test(it.cst) && !near(it.vBC,it.vProd,0.01)){
+      it.vProd=it.vBC; it.vUn=Math.round(it.vBC/it.q*1e6)/1e6; it.avisos=it.avisos.filter(x=>!/unitário calculado/.test(x)); it.avisos.push("valor total do item ilegível: usado o da base do ICMS (CST 00)"); }
+    if(it.vBC>it.vProd*1.5+1) it.avisos.push("base do ICMS maior que o valor do item");
+    if(!it.cProd) it.avisos.push("código não lido");
+    res.itens.push(it); last=it;
+  }
+  const soma=Math.round(res.itens.reduce((a,x)=>a+x.vProd,0)*100)/100; res.somaItens=soma;
+  // conferência da soma: total por rótulo ou qualquer valor do DANFE igual à soma
+  const moneys=(flat.match(/\d{1,3}(?:\.\d{3})*,\d{2}/g)||[]).map(t=>ocrMoney(t));
+  res.somaConfere = res.tot.vProd!==undefined ? near(res.tot.vProd,soma,0.02) : moneys.some(v=>near(v,soma,0.02)&&v>0);
+  return res;
+}
+
+/* ===================== foto: leitura dos itens por OCR (roda no aparelho, sem login) ===================== */
+let _tessP=null;
+function loadTesseract(){ if(window.Tesseract) return Promise.resolve(); if(_tessP) return _tessP;
+  _tessP=new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=new URL("ocr/tesseract.min.js",location.href).href; s.onload=res; s.onerror=()=>{ _tessP=null; rej(new Error("ocr_load")); }; document.head.appendChild(s); }); return _tessP; }
+async function ocrFotos(files,onProg){
+  await loadTesseract();
+  const base=new URL("ocr/",location.href).href;
+  const w=await Tesseract.createWorker("por",1,{workerPath:base+"worker.min.js",corePath:base+"core",langPath:base+"lang",
+    logger:m=>{ if(m.status==="recognizing text"&&onProg) onProg(m.progress); }});
+  try{ await w.setParameters({tessedit_pageseg_mode:"6",preserve_interword_spaces:"1"});
+    const out=[]; for(let i=0;i<files.length;i++){ const im=await loadImg(files[i]); const pp=ocrPrep(im,2400); onProg&&onProg(0,i+1,files.length);
+      const r=await w.recognize(pp.canvas); out.push({text:r.data.text,conf:r.data.confidence}); }
+    return out; }
+  finally{ try{ await w.terminate(); }catch(e){} }
+}
+$("btnOcr").onclick=async()=>{ if(!fotos.length) return; const b=$("btnOcr"); b.disabled=true; $("btnBarcode").disabled=true; const old=b.textContent;
+  let pag=1; const tot=Math.min(fotos.length,4); const prog=(p,i,n)=>{ if(i) pag=i; b.innerHTML=`<span class="spin"></span> Lendo página ${pag} de ${tot}... ${Math.round((p||0)*100)}%`; };
+  show($("msg1"),"info","Lendo a foto no próprio aparelho. Pode levar de 10 segundos a 1 minuto por página. Não feche a tela.");
+  try{
+    let kBar=null; for(const f of fotos.slice(0,tot)){ try{ kBar=await readBarcode(f); }catch(e){} if(kBar) break; }
+    const pages=await ocrFotos(fotos.slice(0,tot),prog);
+    const parsed=pages.map(p=>parseDanfeText(p.text));
+    const st=blankState(); st.fonte="ocr";
+    const kOcr=parsed.map(p=>p.chave).find(Boolean)||"";
+    st.chave=kBar||kOcr||"";
+    const kd=st.chave?decodeChave(st.chave):null;
+    if(kd&&kd.ok){ st.nNF=kd.nNF; st.serie=kd.serie; st.emit.doc=kd.cnpj; st.emit.uf=kd.uf; }
+    const p0=parsed[0]||{}; st.dest.doc=keyClean(p0.dest?.doc||""); st.dest.uf=p0.dest?.uf||""; st.dhEmi=p0.dhEmi||""; st.vNF=num(p0.tot?.vNF||0);
+    st.itens=parsed.flatMap(p=>p.itens).map(x=>{ const it=blankItem(); Object.assign(it,{cProd:x.cProd,xProd:x.xProd,ncm:x.ncm,cfop:x.cfop,u:x.u,q:x.q,vUn:x.vUn,vProd:x.vProd,vDesc:x.vDesc||0});
+      it.icms.cst=x.cst; it.icms.vBC=x.vBC; it.icms.v=x.vICMS; it.icms.p=x.pICMS; it.ipi.v=x.vIPI; it.ipi.p=x.pIPI; it.qDev=it.q; it.aviso=x.avisos.join("; "); return it; });
+    if(!st.itens.length){ show($("msg1"),"bad",`Não consegui ler os itens desta foto${st.chave?" (a chave foi lida)":""}. Tire outra foto mais perto da tabela de produtos, reta, com boa luz e sem sombra, ou digite os itens no passo 3. O XML continua sendo a forma mais precisa.`);
+      if(st.chave) applyKey(st.chave,"chave"); return; }
+    S=st; $("cabDet").open=true; autoPapel(); renderAll();
+    const soma=r2(S.itens.reduce((a,x)=>a+x.vProd,0)); const totDanfe=parsed.map(p=>p.tot?.vProd).find(v=>v!==undefined);
+    const confere=parsed.some(p=>p.somaConfere); const nAv=S.itens.filter(x=>x.aviso).length;
+    const partes=[`Foto lida: ${S.itens.length} item(ns), soma R$ ${brl(soma)}.`];
+    partes.push(st.chave?(kd&&kd.dvOk?"Chave de acesso conferida pelo dígito verificador.":"Chave lida, mas o dígito verificador NÃO confere: confira."):"Chave de acesso não lida: use “Só a chave” ou confira os dados da nota.");
+    partes.push(confere?"A soma dos itens confere com o total dos produtos do DANFE.":`A soma dos itens NÃO confere com o total do DANFE${totDanfe!==undefined?` (R$ ${brl(totDanfe)})`:""}: pode faltar item ou ter número lido errado.`);
+    const totIcms=parsed.map(p=>p.tot?.vICMS).find(v=>v!==undefined); const somaIcms=r2(S.itens.reduce((a,x)=>a+x.icms.v,0));
+    if(totIcms!==undefined && Math.abs(totIcms-somaIcms)>0.02) partes.push(`O ICMS somado dos itens (R$ ${brl(somaIcms)}) não confere com o ICMS do DANFE (R$ ${brl(totIcms)}).`);
+    if(nAv) partes.push(`${nAv} item(ns) marcados em amarelo para conferir.`);
+    partes.push("Confira cada item com o papel antes de enviar.");
+    show($("msg1"),(confere&&!nAv&&kd&&kd.dvOk)?"ok":"warn",partes.join(" "));
+  }catch(e){ show($("msg1"),"bad",e&&e.message==="ocr_load"?"Não foi possível carregar o leitor de fotos. Verifique a internet e tente de novo, ou envie o XML.":"A leitura da foto falhou. Tente outra foto ou envie o XML."); }
+  finally{ b.disabled=false; $("btnBarcode").disabled=false; b.textContent=old; } };
 
 /* ===================== início ===================== */
 function renderBrand(){
