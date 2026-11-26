@@ -28,6 +28,8 @@ input[type=file]{font-size:14px;padding:8px;max-width:100%;overflow:hidden}
 body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 64px}
 .wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.modewrap{display:flex;flex-direction:column;gap:16px}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 header.top{display:flex;flex-direction:column;gap:4px;padding-top:8px}
 h1{font-family:var(--f-head);font-weight:700;font-size:1.7rem;letter-spacing:.01em;margin:0;text-wrap:balance}
 .sub{color:var(--muted);margin:0;max-width:62ch}
@@ -109,8 +111,18 @@ pre.out{white-space:pre-wrap;font-family:var(--f-mono);font-size:.8rem;backgroun
   <p class="note bad" id="jsWarn" style="margin-top:12px">Os campos não funcionam nesta visualização. Abra este app no navegador do celular ou do computador (Chrome, Safari ou Edge) pelo link enviado pelo escritório.</p>
   <header class="top">
     <h1>DADOS PARA EMISSÃO</h1>
-    <p class="sub">Envie a nota que você recebeu (XML ou foto do DANFE), marque o que vai devolver e mande o rascunho para o escritório. O app não emite nota: o escritório confere e emite.</p>
+    <p class="sub" id="subTxt">Envie a nota que você recebeu (XML ou foto do DANFE), marque o que vai devolver e mande o rascunho para o escritório. O app não emite nota: o escritório confere e emite.</p>
   </header>
+
+  <section class="box" aria-labelledby="s0">
+    <div class="lbl"><span id="s0">Que nota você precisa?</span></div>
+    <div class="choice">
+      <label><input type="radio" name="modo" value="dev" checked><div><b>Nota de devolução</b><br><span class="muted">Devolver mercadoria ao fornecedor ou receber de volta o que vendeu.</span></div></label>
+      <label><input type="radio" name="modo" value="venda"><div><b>Nota de venda</b><br><span class="muted">Vender mercadoria ou produto para um cliente.</span></div></label>
+    </div>
+  </section>
+
+  <div id="devWrap" class="modewrap">
 
   <div id="exampleBanner" class="note info banner" hidden>
     <span><b>Dados de exemplo.</b> Isto não é uma nota sua. Carregue a sua nota abaixo.</span>
@@ -131,7 +143,14 @@ pre.out{white-space:pre-wrap;font-family:var(--f-mono);font-size:.8rem;backgroun
     </div>
 
     <div id="pane-foto" hidden class="choice">
-      <label class="f"><span>Foto do DANFE</span><small class="hint">Toque para abrir a câmera ou escolher fotos. Pode mandar mais de uma página.</small><input type="file" id="fileFoto" accept="image/*" capture="environment" multiple></label>
+      <div class="f"><span>Foto do DANFE</span><small class="hint">Tire uma foto de cada página ou escolha fotos já tiradas.</small></div>
+      <div class="row">
+        <button class="btn" id="btnCam" type="button">Tirar foto com a câmera</button>
+        <button class="btn ghost" id="btnGal" type="button">Escolher da galeria</button>
+      </div>
+      <input type="file" id="fileCam" class="vh" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
+      <input type="file" id="fileFoto" class="vh" accept="image/*" multiple tabindex="-1" aria-hidden="true">
+      <p class="muted" style="margin:0;font-size:.85rem">Se a câmera não abrir dentro do WhatsApp ou do Instagram, toque nos três pontinhos e escolha "Abrir no Chrome" (ou no Safari).</p>
       <div class="thumbs" id="thumbs"></div>
       <div class="row">
         <button class="btn" id="btnBarcode" type="button" disabled>Ler código de barras</button>
@@ -245,6 +264,101 @@ pre.out{white-space:pre-wrap;font-family:var(--f-mono);font-size:.8rem;backgroun
     <p id="msg5" class="note" hidden></p>
     <p class="foot">CFOP, natureza e finalidade são sugestões a partir da tabela de CFOP do Convênio SINIEF s/nº, de 15/12/1970 (texto vigente publicado pelo CONFAZ). O escritório confere tudo antes de emitir.</p>
   </section>
+  </div>
+  <!-- VENDA -->
+  <div id="vendaWrap" class="modewrap" hidden>
+  <section class="box" aria-labelledby="v1">
+    <div class="lbl"><span class="step">1</span><span id="v1">Sua empresa (quem vende)</span></div>
+    <div class="grid">
+      <label class="f"><span>CNPJ da sua empresa</span><input id="vEmitDoc" class="mono" inputmode="numeric" placeholder="00.000.000/0000-00"></label>
+      <label class="f"><span>UF da sua empresa</span><select id="vEmitUf"></select></label>
+    </div>
+    <div class="choice">
+      <label><input type="radio" name="vOrig" value="terceiros" checked><div><b>Revendo mercadoria que comprei</b><br><span class="muted">Comércio: a mercadoria foi comprada de terceiros.</span></div></label>
+      <label><input type="radio" name="vOrig" value="producao"><div><b>Vendo o que eu mesmo produzo ou fabrico</b><br><span class="muted">Indústria ou produção própria.</span></div></label>
+    </div>
+  </section>
+
+  <section class="box" aria-labelledby="v2">
+    <div class="lbl"><span class="step">2</span><span id="v2">Para quem vai a nota (cliente)</span></div>
+    <div class="choice">
+      <label><input type="radio" name="vTipo" value="contrib" checked><div><b>Empresa com Inscrição Estadual</b><br><span class="muted">Contribuinte do ICMS.</span></div></label>
+      <label><input type="radio" name="vTipo" value="pjnc"><div><b>Empresa sem Inscrição Estadual</b><br><span class="muted">Ex.: prestador de serviço, consumidor final.</span></div></label>
+      <label><input type="radio" name="vTipo" value="pf"><div><b>Pessoa física</b><br><span class="muted">Consumidor final com CPF.</span></div></label>
+    </div>
+    <div class="grid two">
+      <label class="f"><span id="vDocLbl">CNPJ do cliente</span><input id="vDestDoc" class="mono" inputmode="numeric"></label>
+      <label class="f"><span id="vNomeLbl">Razão social</span><input id="vDestNome"></label>
+    </div>
+    <div class="grid">
+      <label class="f" id="vIeWrap"><span>Inscrição Estadual</span><input id="vDestIe" class="mono" inputmode="numeric"></label>
+      <label class="f"><span>CEP</span><input id="vDestCep" class="mono" inputmode="numeric" placeholder="00000-000"></label>
+      <label class="f"><span>UF</span><select id="vDestUf"></select></label>
+    </div>
+    <div class="grid two">
+      <label class="f"><span>Endereço (rua, número, complemento)</span><input id="vDestEnd"></label>
+      <label class="f"><span>Bairro</span><input id="vDestBairro"></label>
+    </div>
+    <div class="grid two">
+      <label class="f"><span>Município</span><input id="vDestMun"></label>
+      <label class="f"><span>E-mail do cliente (recebe o XML)</span><input id="vDestEmail" type="email" inputmode="email"></label>
+    </div>
+  </section>
+
+  <section class="box" aria-labelledby="v3">
+    <div class="lbl"><span class="step">3</span><span id="v3">Produtos vendidos</span></div>
+    <p class="muted" style="margin:0;font-size:.85rem">Descreva cada produto como no seu cadastro. O NCM está na nota de compra do produto; se não souber, deixe em branco que o escritório completa.</p>
+    <div id="vItens" style="display:flex;flex-direction:column;gap:10px"></div>
+    <div class="row"><button class="btn small ghost" id="vAddItem" type="button">+ Adicionar produto</button></div>
+  </section>
+
+  <section class="box" aria-labelledby="v4">
+    <div class="lbl"><span class="step">4</span><span id="v4">Pagamento e entrega</span></div>
+    <div class="grid two">
+      <label class="f"><span>Forma de pagamento</span>
+        <select id="vPag">
+          <option>Pix</option><option>Dinheiro</option><option>Boleto</option><option>Cartão de crédito</option><option>Cartão de débito</option><option>Transferência / depósito</option><option>Outro (descrever nas observações)</option>
+        </select></label>
+      <label class="f"><span>Condição</span>
+        <select id="vCond"><option value="vista">À vista</option><option value="prazo">A prazo</option></select></label>
+    </div>
+    <label class="f" id="vParcWrap" hidden><span>Parcelas e vencimentos</span><input id="vParc" placeholder="Ex.: 3x de R$ 500,00 — 10/12, 10/01, 10/02"></label>
+    <div class="grid two">
+      <label class="f"><span>Quem paga e faz o frete</span>
+        <select id="vFrete">
+          <option value="9">Sem frete / cliente retira</option>
+          <option value="0">Eu entrego (frete por minha conta)</option>
+          <option value="1">Frete por conta do cliente</option>
+          <option value="2">Transportadora contratada por terceiros</option>
+        </select></label>
+      <label class="f"><span>Valor do frete cobrado na nota</span><input id="vVFrete" inputmode="decimal" class="mono" placeholder="0,00"></label>
+    </div>
+    <div class="grid">
+      <label class="f"><span>Volumes</span><input id="vVol" inputmode="numeric"></label>
+      <label class="f"><span>Peso bruto (kg)</span><input id="vPeso" inputmode="decimal"></label>
+      <label class="f"><span>Transportadora (se houver)</span><input id="vTransp"></label>
+    </div>
+    <label class="f"><span>Observações para o escritório</span><small class="hint">Opcional. Pedido do cliente, endereço de entrega diferente, etc.</small><textarea id="vObs"></textarea></label>
+    <div class="grid">
+      <label class="f"><span>Seu nome</span><input id="vCNome" autocomplete="name"></label>
+      <label class="f"><span>Telefone</span><input id="vCFone" inputmode="tel" autocomplete="tel"></label>
+    </div>
+  </section>
+
+  <section class="box" aria-labelledby="v5">
+    <div class="lbl"><span class="step">5</span><span id="v5">Rascunho para o escritório</span></div>
+    <div id="vChecks"></div>
+    <div class="tbl-wrap"><table id="vTbl"></table></div>
+    <details><summary>Ver texto completo do rascunho</summary><pre class="out" id="vOut"></pre></details>
+    <div class="row">
+      <a class="btn go" id="vWhats" href="#" target="_blank" rel="noopener">Enviar pelo WhatsApp</a>
+      <button class="btn ghost" id="vCopy" type="button">Copiar texto</button>
+      <button class="btn ghost" id="vLimpar" type="button">Limpar e começar outra venda</button>
+    </div>
+    <p id="vMsg" class="note" hidden></p>
+    <p class="foot">CFOP sugerido a partir da tabela do Convênio SINIEF s/nº, de 15/12/1970 (texto vigente publicado pelo CONFAZ). O escritório confere tributação, CST/CSOSN e IBS/CBS antes de emitir.</p>
+  </section>
+  </div>
 </div>
 
 <footer class="sitefoot" id="siteFoot"></footer>
@@ -575,8 +689,12 @@ function applyKey(k, fonte){ const d=decodeChave(k); if(!d.ok){ show($("msg1"),"
 
 /* ===================== foto: código de barras ===================== */
 let fotos=[];
-$("fileFoto").onchange=e=>{ fotos=[...e.target.files]; $("thumbs").innerHTML=""; fotos.forEach(f=>{ const im=document.createElement("img"); im.alt="Página do DANFE"; im.src=URL.createObjectURL(f); $("thumbs").appendChild(im); });
-  $("btnBarcode").disabled=!fotos.length; $("btnIA").disabled=!fotos.length; };
+function addFotos(list,replace){ const nv=[...list]; if(!nv.length) return; fotos=replace?nv:fotos.concat(nv); $("thumbs").innerHTML=""; fotos.forEach(f=>{ const im=document.createElement("img"); im.alt="Página do DANFE"; im.src=URL.createObjectURL(f); $("thumbs").appendChild(im); });
+  $("btnBarcode").disabled=!fotos.length; $("btnIA").disabled=!fotos.length; }
+$("fileCam").onchange=e=>{ addFotos(e.target.files,false); e.target.value=""; };
+$("fileFoto").onchange=e=>{ addFotos(e.target.files,false); e.target.value=""; };
+$("btnCam").onclick=()=>$("fileCam").click();
+$("btnGal").onclick=()=>$("fileFoto").click();
 function loadImg(file){ return new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>rej(new Error("imagem")); im.src=URL.createObjectURL(file); }); }
 function canvasFrom(im,maxSide,crop){ const c=document.createElement("canvas"); const sx=crop?crop[0]*im.naturalWidth:0, sy=crop?crop[1]*im.naturalHeight:0, sw=crop?crop[2]*im.naturalWidth:im.naturalWidth, sh=crop?crop[3]*im.naturalHeight:im.naturalHeight;
   const sc=Math.min(1,maxSide/Math.max(sw,sh)); c.width=Math.round(sw*sc); c.height=Math.round(sh*sc); c.getContext("2d").drawImage(im,sx,sy,sw,sh,0,0,c.width,c.height); return c; }
@@ -643,6 +761,114 @@ function exemplo(){ const st=blankState(); st.exemplo=true; st.fonte="exemplo";
   st.itens=[a,b]; st.vNF=r2(852+660+74.4); return st; }
 $("btnClear").onclick=()=>{ S=blankState(); $("msg1").hidden=true; renderAll(); };
 
+/* ===================== modo: devolução x venda ===================== */
+const SUB_DEV="Envie a nota que você recebeu (XML ou foto do DANFE), marque o que vai devolver e mande o rascunho para o escritório. O app não emite nota: o escritório confere e emite.";
+const SUB_VENDA="Preencha os dados do cliente e dos produtos vendidos e mande o rascunho para o escritório. O app não emite nota: o escritório confere e emite.";
+function setModo(m){ $("devWrap").hidden=m!=="dev"; $("vendaWrap").hidden=m!=="venda"; $("subTxt").textContent=m==="venda"?SUB_VENDA:SUB_DEV; lsSet("app_modo",m); if(m==="venda") vRender(); }
+document.querySelectorAll('input[name="modo"]').forEach(r=>r.addEventListener("change",()=>setModo(r.value)));
+
+/* ===================== venda ===================== */
+function cnpjOk(d){ d=keyClean(d); if(!/^[0-9A-Z]{12}\d{2}$/.test(d)||/^(\d)\1{13}$/.test(d)) return false;
+  const calc=(b)=>{ let s=0,p=2; for(let i=b.length-1;i>=0;i--){ s+=(b.charCodeAt(i)-48)*p; p=p===9?2:p+1; } const r=s%11; return r<2?0:11-r; };
+  const d1=calc(d.slice(0,12)); const d2=calc(d.slice(0,12)+d1); return d.slice(12)===`${d1}${d2}`; }
+function cpfOk(d){ d=onlyDig(d); if(d.length!==11||/^(\d)\1{10}$/.test(d)) return false;
+  const c=(n)=>{ let s=0; for(let i=0;i<n;i++) s+=(+d[i])*(n+1-i); const r=(s*10)%11; return r===10?0:r; };
+  return c(9)===+d[9] && c(10)===+d[10]; }
+const UFS=Object.values(UF_COD).sort();
+const vIds=["vEmitDoc","vEmitUf","vDestDoc","vDestNome","vDestIe","vDestCep","vDestUf","vDestEnd","vDestBairro","vDestMun","vDestEmail","vPag","vCond","vParc","vFrete","vVFrete","vVol","vPeso","vTransp","vObs","vCNome","vCFone"];
+let VI=[];
+const vBlank=()=>({desc:"",cod:"",ncm:"",un:"UN",q:"",vUn:"",desc2:"",st:"nao"});
+const radio=n=>(document.querySelector(`input[name="${n}"]:checked`)||{}).value;
+function vCfop(st,orig,interna,naoContrib){
+  const prod=orig==="producao";
+  if(interna){ if(st==="retido") return prod?"5101":"5405"; if(st==="substituto") return prod?"5401":"5403"; return prod?"5101":"5102"; }
+  if(naoContrib) return prod?"6107":"6108";
+  if(st==="retido") return "6404"; if(st==="substituto") return prod?"6401":"6403"; return prod?"6101":"6102"; }
+function vItemCard(it,i){
+  const d=document.createElement("div"); d.className="box"; d.style.padding="12px"; d.style.gap="8px";
+  d.innerHTML=`<div class="row" style="justify-content:space-between"><b>Produto ${i+1}</b><button class="btn small ghost" type="button" data-rm>Remover</button></div>
+  <label class="f"><span>Descrição do produto</span><input data-k="desc"></label>
+  <div class="grid"><label class="f"><span>Código (se tiver)</span><input data-k="cod"></label><label class="f"><span>NCM</span><input data-k="ncm" class="mono" inputmode="numeric" maxlength="10"></label><label class="f"><span>Unidade</span><input data-k="un" placeholder="UN, CX, KG..."></label></div>
+  <div class="grid"><label class="f"><span>Quantidade</span><input data-k="q" inputmode="decimal" class="mono"></label><label class="f"><span>Valor unitário (R$)</span><input data-k="vUn" inputmode="decimal" class="mono"></label><label class="f"><span>Desconto (R$)</span><input data-k="desc2" inputmode="decimal" class="mono"></label></div>
+  <label class="f"><span>Substituição tributária (ST)</span><select data-k="st">
+    <option value="nao">Sem ST / não sei</option>
+    <option value="retido">Com ST já paga na compra (o ICMS-ST veio na nota do fornecedor)</option>
+    <option value="substituto">Com ST que eu recolho nesta venda</option></select></label>
+  <div class="muted" data-tot style="font-size:.9rem"></div>`;
+  d.querySelectorAll("[data-k]").forEach(el=>{ el.value=it[el.dataset.k]??""; el.addEventListener("input",()=>{ it[el.dataset.k]=el.value; vUpd(); }); });
+  d.querySelector("[data-rm]").onclick=()=>{ VI.splice(i,1); if(!VI.length) VI.push(vBlank()); vRenderItens(); vUpd(); };
+  return d; }
+function vRenderItens(){ const c=$("vItens"); c.innerHTML=""; VI.forEach((it,i)=>c.appendChild(vItemCard(it,i))); }
+function vBuild(){
+  const g=id=>$(id).value.trim();
+  const tipo=radio("vTipo"), orig=radio("vOrig");
+  const eUf=g("vEmitUf"), dUf=g("vDestUf"); const interna=!dUf||eUf===dUf; const naoContrib=tipo!=="contrib";
+  const checks=[];
+  const eDoc=keyClean(g("vEmitDoc")); if(!eDoc) checks.push(["warn","Informe o CNPJ da sua empresa."]); else if(!cnpjOk(eDoc)) checks.push(["bad","CNPJ da sua empresa com dígito verificador errado. Confira."]);
+  const dDoc=keyClean(g("vDestDoc"));
+  if(!dDoc) checks.push(["warn", tipo==="pf"?"Informe o CPF do cliente.":"Informe o CNPJ do cliente."]);
+  else if(tipo==="pf"? !cpfOk(dDoc) : !cnpjOk(dDoc)) checks.push(["bad",(tipo==="pf"?"CPF":"CNPJ")+" do cliente com dígito verificador errado. Confira."]);
+  if(!g("vDestNome")) checks.push(["warn","Informe o nome ou a razão social do cliente."]);
+  if(tipo==="contrib"&&!g("vDestIe")) checks.push(["warn","Cliente marcado como contribuinte: informe a Inscrição Estadual."]);
+  if(!g("vDestEnd")||!g("vDestMun")||!dUf) checks.push(["warn","Endereço do cliente incompleto (rua, município e UF são obrigatórios na nota)."]);
+  if(!interna&&naoContrib) checks.push(["info","Venda para não contribuinte de outro estado: há DIFAL do ICMS. O escritório calcula."]);
+  if(!interna&&!naoContrib&&VI.some(x=>x.st!=="nao")) checks.push(["info","Venda interestadual com ST: o escritório confere se há protocolo/convênio entre os estados."]);
+  const sel=VI.filter(x=>x.desc.trim()||num(x.q)||num(x.vUn)).map(x=>{ const q=num(x.q), vu=num(x.vUn), vd=num(x.desc2); const vProd=r2(q*vu); return {x,q,vu,vd,vProd,cfop:vCfop(x.st,orig,interna,naoContrib)}; });
+  if(!sel.length) checks.push(["warn","Inclua pelo menos um produto."]);
+  sel.forEach((s,i)=>{ if(!s.q||!s.vu) checks.push(["warn",`Produto ${i+1}: falta quantidade ou valor unitário.`]); if(s.x.ncm&&onlyDig(s.x.ncm).length!==8) checks.push(["warn",`Produto ${i+1}: NCM deve ter 8 dígitos.`]); if(orig==="producao"&&s.x.st==="retido") checks.push(["info",`Produto ${i+1}: produção própria com ST já paga é incomum; o escritório confere o CFOP.`]); });
+  const tProd=r2(sel.reduce((a,s)=>a+s.vProd,0)), tDesc=r2(sel.reduce((a,s)=>a+s.vd,0)), vFrete=r2(num(g("vVFrete")));
+  const tNF=r2(tProd-tDesc+vFrete);
+  if(!checks.some(c=>c[0]!=="info")) checks.unshift(["ok","Dados principais preenchidos."]);
+  const tipoTxt={contrib:"Contribuinte do ICMS (com IE)",pjnc:"Empresa sem IE (não contribuinte)",pf:"Pessoa física (consumidor final)"}[tipo];
+  const freteTxt=$("vFrete").selectedOptions[0].text;
+  const L=[];
+  L.push("RASCUNHO DE NF-e DE VENDA (não é documento fiscal)");
+  L.push(`Enviado pelo app ${BRAND.nome} em ${new Date().toLocaleString("pt-BR")}`); L.push("");
+  L.push("EMITENTE (quem vende)"); L.push(`CNPJ: ${fmtDoc(eDoc)||"-"} · UF: ${eUf||"-"}`); L.push(`Mercadoria: ${orig==="producao"?"produção própria":"revenda (adquirida de terceiros)"}`); L.push("");
+  L.push("DESTINATÁRIO"); L.push(`${tipoTxt}`); L.push(`${tipo==="pf"?"CPF":"CNPJ"}: ${fmtDoc(dDoc)||"-"}${tipo==="contrib"?` · IE: ${g("vDestIe")||"-"}`:""}`); L.push(`Nome: ${g("vDestNome")||"-"}`);
+  L.push(`Endereço: ${g("vDestEnd")||"-"}${g("vDestBairro")?", "+g("vDestBairro"):""} · ${g("vDestMun")||"-"}/${dUf||"-"} · CEP ${g("vDestCep")||"-"}`); if(g("vDestEmail")) L.push(`E-mail: ${g("vDestEmail")}`);
+  L.push(`Operação: ${interna?"interna":"interestadual"} · Consumidor final: ${naoContrib?"sim":"não"}`); L.push("");
+  L.push("PRODUTOS");
+  sel.forEach((s,i)=>{ L.push(`${i+1}) ${s.x.desc||"(sem descrição)"}${s.x.cod?` · cód ${s.x.cod}`:""}${s.x.ncm?` · NCM ${onlyDig(s.x.ncm)}`:" · NCM a informar"}`);
+    L.push(`   ${qf(s.q)} ${s.x.un||"UN"} x R$ ${brl(s.vu)} = R$ ${brl(s.vProd)}${s.vd?` · desconto R$ ${brl(s.vd)}`:""}`);
+    L.push(`   ST: ${{nao:"sem ST / não informado",retido:"ST já retida na compra",substituto:"ST a recolher nesta venda"}[s.x.st]} · CFOP sugerido ${s.cfop} (conferir)`); });
+  L.push(""); L.push(`Total produtos: R$ ${brl(tProd)}${tDesc?` · Descontos: R$ ${brl(tDesc)}`:""}${vFrete?` · Frete: R$ ${brl(vFrete)}`:""}`); L.push(`TOTAL DA NOTA (sem impostos destacados por fora): R$ ${brl(tNF)}`); L.push("");
+  L.push("PAGAMENTO"); L.push(`${g("vPag")} · ${g("vCond")==="prazo"?"a prazo":"à vista"}${g("vCond")==="prazo"&&g("vParc")?` · ${g("vParc")}`:""}`); L.push("");
+  L.push("TRANSPORTE"); L.push(`${freteTxt}${g("vTransp")?` · Transportadora: ${g("vTransp")}`:""}${g("vVol")?` · Volumes: ${g("vVol")}`:""}${g("vPeso")?` · Peso bruto: ${g("vPeso")} kg`:""}`);
+  if(g("vObs")){ L.push(""); L.push("OBSERVAÇÕES"); L.push(g("vObs")); }
+  L.push(""); L.push(`Contato: ${g("vCNome")||"-"} · ${g("vCFone")||"-"}`);
+  L.push(""); L.push("CFOP sugerido pela tabela do Conv. SINIEF s/nº/1970. Tributação, CST/CSOSN e IBS/CBS a definir pelo escritório.");
+  return {checks,sel,tProd,tDesc,vFrete,tNF,text:L.join("\n")}; }
+function vUpd(){
+  const d=vBuild();
+  $("vChecks").innerHTML=d.checks.map(([c,t])=>`<p class="note ${c}" style="margin-bottom:6px">${esc(t)}</p>`).join("");
+  const rows=d.sel.map(s=>`<tr><td>${esc(s.x.desc||"-")}</td><td class="n">${qf(s.q)} ${esc(s.x.un||"")}</td><td class="n">${s.cfop}</td><td class="n">${brl(s.vProd)}</td></tr>`).join("");
+  $("vTbl").innerHTML=`<thead><tr><th>Produto</th><th class="n">Qtd</th><th class="n">CFOP sug.</th><th class="n">Valor</th></tr></thead><tbody>${rows||`<tr><td colspan="4" class="muted">Nenhum produto.</td></tr>`}</tbody><tfoot><tr><th>Total da nota</th><td></td><td></td><td class="n"><b>${brl(d.tNF)}</b></td></tr></tfoot>`;
+  $("vOut").textContent=d.text;
+  const w=onlyDig($("cfgWhats").value); const wnum=w?(w.length<=11?"55"+w:w):"";
+  let txt=d.text; if(txt.length>3500) txt=txt.slice(0,3400)+"\n[... texto cortado: use Copiar texto]";
+  $("vWhats").href=`https://wa.me/${wnum}?text=${encodeURIComponent(txt)}`;
+  document.querySelectorAll("#vItens [data-tot]").forEach((el,i)=>{ const s=VI[i]; const v=r2(num(s.q)*num(s.vUn)); el.textContent=v?`Subtotal R$ ${brl(v)}`:""; });
+  const tipo=radio("vTipo"); $("vIeWrap").hidden=tipo!=="contrib"; $("vDocLbl").textContent=tipo==="pf"?"CPF do cliente":"CNPJ do cliente"; $("vNomeLbl").textContent=tipo==="pf"?"Nome completo":"Razão social";
+  $("vParcWrap").hidden=$("vCond").value!=="prazo";
+  lsSet("venda_itens",VI); vIds.forEach(id=>lsSet("venda_"+id,$(id).value)); lsSet("venda_tipo",tipo); lsSet("venda_orig",radio("vOrig"));
+  return d; }
+function vRender(){ vRenderItens(); vUpd(); }
+function vInit(){
+  ["vEmitUf","vDestUf"].forEach(id=>{ $(id).innerHTML=`<option value="">--</option>`+UFS.map(u=>`<option>${u}</option>`).join(""); });
+  $("vEmitUf").value="RS";
+  vIds.forEach(id=>{ const v=lsGet("venda_"+id,null); if(v!==null) $(id).value=v; $(id).addEventListener("input",vUpd); $(id).addEventListener("change",vUpd); });
+  const t=lsGet("venda_tipo",null), o=lsGet("venda_orig",null);
+  if(t){ const r=document.querySelector(`input[name="vTipo"][value="${t}"]`); if(r) r.checked=true; }
+  if(o){ const r=document.querySelector(`input[name="vOrig"][value="${o}"]`); if(r) r.checked=true; }
+  document.querySelectorAll('input[name="vTipo"],input[name="vOrig"]').forEach(r=>r.addEventListener("change",vUpd));
+  VI=lsGet("venda_itens",null)||[vBlank()]; if(!VI.length) VI=[vBlank()];
+  $("vAddItem").onclick=()=>{ VI.push(vBlank()); vRenderItens(); vUpd(); };
+  $("vCopy").onclick=async()=>{ const t=vBuild().text; try{ await navigator.clipboard.writeText(t); show($("vMsg"),"ok","Rascunho copiado. Cole no WhatsApp ou no e-mail do escritório."); }catch(e){ show($("vMsg"),"warn","Não foi possível copiar. Abra 'Ver texto completo' e copie manualmente."); } };
+  $("vLimpar").onclick=()=>{ const keep={vEmitDoc:$("vEmitDoc").value,vEmitUf:$("vEmitUf").value,vCNome:$("vCNome").value,vCFone:$("vCFone").value}; vIds.forEach(id=>{ const el=$(id); el.value = keep[id]??(el.tagName==="SELECT"?el.options[0].value:""); }); VI=[vBlank()]; $("vMsg").hidden=true; vRender(); };
+  vRender();
+}
+
 /* ===================== início ===================== */
 function renderBrand(){
   const bi=$("brandIn"); bi.innerHTML="";
@@ -666,6 +892,7 @@ function renderBrand(){
   else { S=exemplo(); fillFinalidade(); }
   renderAll();
   initSample(); initDl();
+  vInit(); const m=lsGet("app_modo","dev"); const mr=document.querySelector(`input[name="modo"][value="${m}"]`); if(mr) mr.checked=true; setModo(m);
 })();
 </script>
 </body></html>
